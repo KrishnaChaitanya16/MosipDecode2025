@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MOSIP OCR: Extraction & Verification</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="app-header">
+    <h1>OCR Extraction & Verification</h1>
+    <p class="subtitle">Upload a scanned document, extract fields, then verify.</p>
+  </header>
+
+  <main class="container">
+    <section class="card" id="upload-section">
+      <h2>1) Choose Mode & Document</h2>
+      <div class="grid">
+        <label>
+          <span>Mode</span>
+          <select id="mode-select">
+            <option value="extract">Extract text from document</option>
+            <option value="compare">Compare entered fields with a document</option>
+          </select>
+        </label>
+      </div>
+      <div class="grid">
+        <label>
+          <span>Template</span>
+          <select id="template-select">
+            <option value="contact">Contact Form (Name, Email, Phone)</option>
+            <option value="id">Generic ID (Name, DOB, ID Number)</option>
+            <option value="certificate">Certificate (Name, DOB)</option>
+          </select>
+        </label>
+      </div>
+      <form id="upload-form">
+        <label class="file-drop" id="dropzone">
+          <input type="file" id="document" name="document" accept="image/*,.pdf" required />
+          <span id="file-label">Drag & drop or click to select a PDF/Image</span>
+        </label>
+        <div class="grid" id="source-group">
+          <label>
+            <span>Document Source</span>
+            <select id="doc-source">
+              <option value="file">Upload from device</option>
+              <option value="url">Use a document URL</option>
+            </select>
+          </label>
+          <label id="url-wrapper" hidden>
+            <span>Document URL</span>
+            <input type="url" id="document-url" placeholder="https://example.com/sample.pdf" />
+          </label>
+        </div>
+        <div class="actions">
+          <button type="submit" id="extract-btn">Run Extraction</button>
+        </div>
+      </form>
+      <div class="help">Supports English. Works with ID cards, forms, certificates.</div>
+      <div class="progress" id="extract-progress" hidden>
+        <div class="spinner"></div>
+        <span>Extracting text…</span>
+      </div>
+    </section>
+
+    <section class="card" id="extracted-section" hidden>
+      <h2>2) Review & Edit Extracted Fields</h2>
+      <form id="fields-form">
+        <div class="grid" id="dynamic-fields"></div>
+        <details class="raw-text">
+          <summary>Show raw OCR text</summary>
+          <pre id="raw-text"></pre>
+        </details>
+        <div class="actions">
+          <button type="button" id="verify-btn" class="secondary">Verify Against Document</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="card" id="verify-section" hidden>
+      <h2>3) Verification Results</h2>
+      <div id="verification-results" class="verification-results"></div>
+      <div class="actions">
+        <button id="reset-btn" class="link">Start over</button>
+      </div>
+      <div class="progress" id="verify-progress" hidden>
+        <div class="spinner"></div>
+        <span>Verifying…</span>
+      </div>
+    </section>
+  </main>
+
+  <footer class="app-footer">
+    <span>Local-only, no cloud. Powered by TrOCR.</span>
+  </footer>
+
+  <script src="script.js"></script>
+  <script>
+    // Optional: allow overriding API base via query ?api=http://localhost:8000
+    const params = new URLSearchParams(location.search);
+    const api = params.get('api');
+    if (api) localStorage.setItem('apiBase', api);
+  </script>
+</body>
+<!-- Do not modify backend. This frontend calls /extract and /verify as defined. -->
+</html>
+
