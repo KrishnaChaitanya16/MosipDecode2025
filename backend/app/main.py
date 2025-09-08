@@ -7,17 +7,24 @@ import os
 
 app = FastAPI(title="OCR Extraction & Verification API")
 
-# Allow frontend access
+# ✅ Explicit CORS config
+origins = [
+    "http://127.0.0.1:5500",   # VSCode Live Server
+    "http://localhost:5500",   # fallback
+    "http://127.0.0.1:3000",   # React dev
+    "http://localhost:3000"
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=origins,
+    allow_credentials=True,  # keep it True if you ever use cookies/auth
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
-
 
 @app.post("/extract")
 async def extract(document: UploadFile = File(...)):
@@ -30,7 +37,6 @@ async def extract(document: UploadFile = File(...)):
     fields = map_fields(text)
 
     return {"raw_text": text, "mapped_fields": fields}
-
 
 @app.post("/verify")
 async def verify(
