@@ -1,20 +1,8 @@
-# Core scientific stack
-numpy<2.0
-scipy<1.14
-
-# Image & PDF processing
-opencv-python<4.10
-pillow
-pymupdf
-
-# HuggingFace OCR (TrOCR)
+fastapi
+uvicorn
 torch
 transformers
-sentencepiece
-
-# FastAPI backend
-fastapi
-uvicorn[standard]
-
-# Optional: useful utilities
+Pillow
 python-multipart
+opencv-python
+pdf2image
