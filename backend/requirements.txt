@@ -1,13 +1,13 @@
-fastapi>=0.111.0,<0.112.0
-uvicorn[standard]>=0.23.2,<0.24.0
-python-multipart>=0.0.6,<0.1.0
-pydantic>=2.7.0,<3.0.0
+fastapi
+uvicorn[standard]
+python-multipart
+pydantic
 
-phocr[cpu]==1.0.3
-transformers>=4.34.0,<5.0.0
-torch==2.3.1
-torchvision==0.18.1
-numpy>=1.26.0,<2.0.0
-opencv-python>=4.8.1.78,<5.0.0
-Pillow>=10.1.0,<11.0.0
-pdf2image>=1.16.3,<2.0.0
+phocr[cpu]
+transformers
+torch
+torchvision
+numpy
+opencv-python
+Pillow
+pdf2image
