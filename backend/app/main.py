@@ -36,8 +36,10 @@ async def extract(document: UploadFile = File(...)):
         shutil.copyfileobj(document.file, buffer)
 
     text = extract_text(temp_path)
+    new_text = " ".join(text["texts"])
+    print(new_text)
     fields = map_fields(text)
-    return {"raw_text": text, "mapped_fields": fields}
+    return {"mapped_fields": fields}
 
 
 @app.post("/verify")

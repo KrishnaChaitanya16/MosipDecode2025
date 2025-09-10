@@ -1,92 +1,105 @@
+# extraction.py
+
 import os
 import re
-import cv2
-import numpy as np
-from PIL import Image, ImageDraw
-from transformers import TrOCRProcessor, VisionEncoderDecoderModel
-from app.utils import convert_pdf_to_image
-import re
+from typing import Dict, List
+from PIL import Image
+from phocr import PHOCR
 
 # ----------------------------
-# Load TrOCR model (printed text)
+# Load PHOCR model
 # ----------------------------
-processor = TrOCRProcessor.from_pretrained("microsoft/trocr-base-printed")
-model = VisionEncoderDecoderModel.from_pretrained("microsoft/trocr-base-printed")
+engine = PHOCR()
+
+# canonical label variants grouped by target field
+_KEY_VARIANTS = {
+    "name": ["full name", "name"],
+    "age": ["age", "years", "y/o"],
+    "gender": ["gender", "sex"],
+    "dob": ["dob", "date of birth", "birthdate", "birth date"],
+    "address": ["address", "addr"],
+    "country": ["country", "nation", "nationality"],
+    "phone": ["phone number", "phone", "mobile", "tel", "telephone", "contact"],
+    "email": ["email", "e-mail", "email address"],
+    "id_number": ["id number", "id", "passport no", "passport number", "passport"],
+}
+
+_LABEL_TO_FIELD = {}
+for fld, variants in _KEY_VARIANTS.items():
+    for v in variants:
+        _LABEL_TO_FIELD[v.lower()] = fld
+
+# build alternation for regex; put longer phrases first to prefer "phone number" over "phone"
+_all_variants_sorted = sorted(set(_LABEL_TO_FIELD.keys()), key=lambda s: -len(s))
+_LABEL_PATTERN = r'\b(' + '|'.join(re.escape(v) for v in _all_variants_sorted) + r')\b\s*:?\s*'
+_LABEL_RE = re.compile(_LABEL_PATTERN, flags=re.IGNORECASE | re.DOTALL)
+
+def _extract_email(s: str) -> str:
+    m = re.search(r'[\w\.-]+@[\w\.-]+\.\w+', s)
+    return m.group(0).strip() if m else None
 
 
-# ----------------------------
-# Detect text line bounding boxes
-# ----------------------------
-def detect_text_lines(pil_img: Image.Image, debug: bool = False):
-    """Detect text line bounding boxes from an image using OpenCV"""
-    # Convert PIL -> OpenCV
-    img = np.array(pil_img.convert("RGB"))
-    gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
+def _extract_phone(s: str) -> str:
+    # common phone pattern (loose)
+    m = re.search(r'(\+?\d[\d\-\s().]{6,}\d)', s)
+    return m.group(1).strip() if m else None
 
-    # Binarize image
-    _, thresh = cv2.threshold(
-        gray, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU
-    )
 
-    # Dilate to merge text regions
-    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (img.shape[1] // 30, 5))
-    dilated = cv2.dilate(thresh, kernel, iterations=1)
+def _extract_age(s: str) -> str:
+    m = re.search(r'\b(\d{1,3})\b', s)
+    return m.group(1) if m else None
 
-    # Find contours
-    contours, _ = cv2.findContours(
-        dilated, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
-    )
 
-    boxes = []
-    for cnt in contours:
-        x, y, w, h = cv2.boundingRect(cnt)
-        if h > 15 and w > 30:  # filter out noise
-            boxes.append((x, y, x + w, y + h))
-
-    # Sort boxes top-to-bottom
-    boxes = sorted(boxes, key=lambda b: b[1])
-
-    if debug:
-        debug_img = pil_img.copy()
-        draw = ImageDraw.Draw(debug_img)
-        for (x1, y1, x2, y2) in boxes:
-            draw.rectangle([x1, y1, x2, y2], outline="red", width=2)
-        debug_img.show()  # OR save: debug_img.save("debug_boxes.png")
-
-    return boxes
-
+def _normalize_value_between_labels(val: str) -> str:
+    # trim and remove stray separators
+    return val.strip(" \t\n\r:;,-")
 
 # ----------------------------
 # OCR extraction
 # ----------------------------
-def extract_text(file_path: str, debug: bool = False) -> str:
-    """Run OCR on automatically detected text lines and return full extracted text"""
-    if file_path.lower().endswith(".pdf"):
-        image = convert_pdf_to_image(file_path)
-    else:
-        image = Image.open(file_path).convert("RGB")
+def extract_text(file_path: str, debug: bool = False) -> Dict:
+    """
+    Run PHOCR on an image or PDF and return structured extraction result.
+    :param file_path: path to input image or PDF
+    :param debug: print debug info
+    :return: dict with texts, scores, boxes, language, elapsed_time
+    """
+    try:
+        # If PDF, convert to image (your util handles it)
+        if file_path.lower().endswith(".pdf"):
+            from app.utils import convert_pdf_to_image
+            image = convert_pdf_to_image(file_path)
+        else:
+            image = Image.open(file_path).convert("RGB")
 
-    boxes = detect_text_lines(image, debug=debug)
+        # Run PHOCR
+        result = engine(image)
 
-    lines = []
-    for (x1, y1, x2, y2) in boxes:
-        cropped = image.crop((x1, y1, x2, y2))
-        pixel_values = processor(images=cropped, return_tensors="pt").pixel_values
-        generated_ids = model.generate(pixel_values)
-        text = processor.batch_decode(generated_ids, skip_special_tokens=True)[0]
-        lines.append(text)
+        output = {
+            "texts": list(result.txts),
+            "scores": list(result.scores),
+            "boxes": result.boxes.tolist() if result.boxes is not None else [],
+            "language": str(result.lang_type),
+            "elapsed_time": result.elapse,
+        }
 
-    return "\n".join(lines)
+        if debug:
+            print(output)
+
+        return output
+
+    except Exception as e:
+        return {"error": str(e)}
 
 
-# ----------------------------
-# Field mapping
-# ----------------------------
-# ----------------------------
-# Field mapping
-# ----------------------------
-def map_fields(text: str) -> dict:
-    """Extract structured fields from OCR text"""
+
+
+def map_fields(result: Dict) -> Dict:
+    """
+    Robust mapping of OCR result -> structured fields.
+    Input: result dict with key "texts" (list of strings) OR a plain string.
+    Output: dict with keys: name, age, gender, dob, address, country, phone, email, id_number
+    """
     fields = {
         "name": None,
         "age": None,
@@ -99,71 +112,81 @@ def map_fields(text: str) -> dict:
         "id_number": None,
     }
 
-    lines = [line.strip() for line in text.split("\n") if line.strip()]
-    i = 0
-    while i < len(lines):
-        line = lines[i]
+    # get a single normalized text blob
+    if isinstance(result, dict) and isinstance(result.get("texts"), list):
+        full_text = " ".join(result["texts"])
+    elif isinstance(result, str):
+        full_text = result
+    else:
+        # nothing to map
+        return fields
 
-        # NAME
-        if re.search(r"\bNAME\b", line, re.I):
-            if i + 1 < len(lines):
-                fields["name"] = lines[i + 1].strip()
-                i += 1
+    # normalize whitespace
+    full_text = re.sub(r'\s+', ' ', full_text).strip()
 
-        # AGE
-        elif re.search(r"\bAGE\b", line, re.I):
-            if i + 1 < len(lines) and lines[i + 1].isdigit():
-                fields["age"] = lines[i + 1].strip()
-                i += 1
+    # find all label matches (left to right)
+    matches = []
+    for m in _LABEL_RE.finditer(full_text):
+        label_text = m.group(1).lower()
+        field = _LABEL_TO_FIELD.get(label_text)
+        if field:
+            matches.append({
+                "field": field,
+                "label": label_text,
+                "start": m.start(),
+                "end": m.end()  # end includes optional colon/space (value starts here)
+            })
 
-        # GENDER
-        elif re.search(r"\bGENDER\b", line, re.I):
-            if i + 1 < len(lines):
-                fields["gender"] = lines[i + 1].strip()
-                i += 1
+    # if we found labeled keys, extract between-label values
+    if matches:
+        # sort by start (should already be left-to-right)
+        matches = sorted(matches, key=lambda x: x["start"])
+        for i, mm in enumerate(matches):
+            start_val = mm["end"]
+            end_val = matches[i + 1]["start"] if i + 1 < len(matches) else len(full_text)
+            raw_val = full_text[start_val:end_val]
+            val = _normalize_value_between_labels(raw_val)
 
-        # DOB
-        elif re.search(r"(DOB|Date of Birth)", line, re.I):
-            if i + 1 < len(lines):
-                fields["dob"] = lines[i + 1].strip()
-                i += 1
+            # post-process common fields
+            fld = mm["field"]
+            if fld == "email":
+                fields["email"] = _extract_email(val) or val or None
+            elif fld == "phone":
+                fields["phone"] = _extract_phone(val) or val or None
+            elif fld == "age":
+                fields["age"] = _extract_age(val) or val or None
+            elif fld == "name":
+                # remove trailing accidental label words (safety)
+                val = re.sub(r'(?i)\b(age|gender|address|country|phone|email|id|dob|passport)\b.*$', '', val).strip()
+                fields["name"] = val or None
+            else:
+                fields[fld] = val or None
 
-        # ADDRESS (multi-line until next keyword)
-        elif re.search(r"\bADDRESS\b", line, re.I):
-            addr_lines = []
-            j = i + 1
-            while j < len(lines) and not re.search(
-                r"(COUNTRY|PHONE|EMAIL|ID)", lines[j], re.I
-            ):
-                addr_lines.append(lines[j])
-                j += 1
-            fields["address"] = " ".join(addr_lines).strip()
-            i = j - 1
-
-        # COUNTRY
-        elif re.search(r"\bCOUNTRY\b", line, re.I):
-            if i + 1 < len(lines):
-                fields["country"] = lines[i + 1].strip()
-                i += 1
-
-        i += 1
-
-    # ----------------------------
-    # Additional fields via regex
-    # ----------------------------
+    # fallback regex scans for values missed above (useful if no explicit labels present)
     # EMAIL
-    email_match = re.search(r"[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}", text, re.I)
-    if email_match:
-        fields["email"] = email_match.group(0).strip()
+    if not fields["email"]:
+        fields["email"] = _extract_email(full_text)
 
     # PHONE
-    phone_match = re.search(r"\+?\d[\d\s().-]{7,}\d", text)
-    if phone_match:
-        fields["phone"] = phone_match.group(0).strip()
+    if not fields["phone"]:
+        fields["phone"] = _extract_phone(full_text)
 
-    # ID Number (alphanumeric, 5-20 chars)
-    id_match = re.search(r"\bID[:\s]*([A-Z0-9-]{5,20})\b", text, re.I)
-    if id_match:
-        fields["id_number"] = id_match.group(1).strip()
+    # AGE (if still missing)
+    if not fields["age"]:
+        am = re.search(r'\bAge[:\s]*([0-9]{1,3})\b', full_text, re.IGNORECASE)
+        if am:
+            fields["age"] = am.group(1)
+
+    # ID_NUMBER: try common patterns
+    if not fields["id_number"]:
+        id_m = re.search(r'\b(ID(?:\s*Number)?|Passport(?:\s*No(?:\.)?)?)[:\s]*([A-Z0-9\-]{5,30})\b', full_text, re.I)
+        if id_m:
+            fields["id_number"] = id_m.group(2).strip()
+
+    # final cleanups: trim again
+    for k, v in list(fields.items()):
+        if isinstance(v, str):
+            v = v.strip(" \t\n\r,:;")
+            fields[k] = v if v else None
 
     return fields
