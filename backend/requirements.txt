@@ -6,3 +6,5 @@ Pillow
 python-multipart
 opencv-python
 pdf2image
+phocr
+onxruntime
