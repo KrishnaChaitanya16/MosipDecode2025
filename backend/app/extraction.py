@@ -11,6 +11,7 @@ from phocr import PHOCR
 # ----------------------------
 engine = PHOCR()
 
+
 # canonical label variants grouped by target field
 _KEY_VARIANTS = {
     "name": ["full name", "name"],
@@ -53,6 +54,29 @@ def _extract_age(s: str) -> str:
 def _normalize_value_between_labels(val: str) -> str:
     # trim and remove stray separators
     return val.strip(" \t\n\r:;,-")
+
+
+def _calculate_confidence_for_text(texts: List[str], scores: List[float], extracted_text: str) -> float:
+    """
+    Calculate confidence score for extracted text by finding matching text segments
+    and averaging their confidence scores.
+    """
+    if not extracted_text or not texts or not scores:
+        return 0.0
+    
+    # Find text segments that contribute to the extracted text
+    matching_scores = []
+    extracted_lower = extracted_text.lower().strip()
+    
+    for i, text_segment in enumerate(texts):
+        if i < len(scores) and text_segment.lower().strip() in extracted_lower:
+            matching_scores.append(scores[i])
+    
+    if matching_scores:
+        return sum(matching_scores) / len(matching_scores)
+    else:
+        # If no exact matches, return average of all scores as fallback
+        return sum(scores) / len(scores) if scores else 0.0
 
 # ----------------------------
 # OCR extraction
@@ -97,8 +121,9 @@ def extract_text(file_path: str, debug: bool = False) -> Dict:
 def map_fields(result: Dict) -> Dict:
     """
     Robust mapping of OCR result -> structured fields.
-    Input: result dict with key "texts" (list of strings) OR a plain string.
+    Input: result dict with key "texts" (list of strings) and "scores" (list of floats) OR a plain string.
     Output: dict with keys: name, age, gender, dob, address, country, phone, email, id_number
+    Each field contains: {"value": str, "confidence": float}
     """
     fields = {
         "name": None,
@@ -111,15 +136,34 @@ def map_fields(result: Dict) -> Dict:
         "email": None,
         "id_number": None,
     }
+    
+    # Initialize confidence scores
+    confidence_scores = {
+        "name": None,
+        "age": None,
+        "gender": None,
+        "dob": None,
+        "address": None,
+        "country": None,
+        "phone": None,
+        "email": None,
+        "id_number": None,
+    }
 
-    # get a single normalized text blob
+    # get a single normalized text blob and scores
+    texts = []
+    scores = []
     if isinstance(result, dict) and isinstance(result.get("texts"), list):
-        full_text = " ".join(result["texts"])
+        texts = result["texts"]
+        scores = result.get("scores", [])
+        full_text = " ".join(texts)
     elif isinstance(result, str):
         full_text = result
+        texts = [result]
+        scores = [1.0]  # Default confidence for plain string input
     else:
         # nothing to map
-        return fields
+        return {field: {"value": None, "confidence": None} for field in fields.keys()}
 
     # normalize whitespace
     full_text = re.sub(r'\s+', ' ', full_text).strip()
@@ -149,44 +193,66 @@ def map_fields(result: Dict) -> Dict:
 
             # post-process common fields
             fld = mm["field"]
+            extracted_value = None
             if fld == "email":
-                fields["email"] = _extract_email(val) or val or None
+                extracted_value = _extract_email(val) or val or None
             elif fld == "phone":
-                fields["phone"] = _extract_phone(val) or val or None
+                extracted_value = _extract_phone(val) or val or None
             elif fld == "age":
-                fields["age"] = _extract_age(val) or val or None
+                extracted_value = _extract_age(val) or val or None
             elif fld == "name":
                 # remove trailing accidental label words (safety)
                 val = re.sub(r'(?i)\b(age|gender|address|country|phone|email|id|dob|passport)\b.*$', '', val).strip()
-                fields["name"] = val or None
+                extracted_value = val or None
             else:
-                fields[fld] = val or None
+                extracted_value = val or None
+            
+            if extracted_value:
+                fields[fld] = extracted_value
+                confidence_scores[fld] = _calculate_confidence_for_text(texts, scores, extracted_value)
 
     # fallback regex scans for values missed above (useful if no explicit labels present)
     # EMAIL
     if not fields["email"]:
-        fields["email"] = _extract_email(full_text)
+        email_val = _extract_email(full_text)
+        if email_val:
+            fields["email"] = email_val
+            confidence_scores["email"] = _calculate_confidence_for_text(texts, scores, email_val)
 
     # PHONE
     if not fields["phone"]:
-        fields["phone"] = _extract_phone(full_text)
+        phone_val = _extract_phone(full_text)
+        if phone_val:
+            fields["phone"] = phone_val
+            confidence_scores["phone"] = _calculate_confidence_for_text(texts, scores, phone_val)
 
     # AGE (if still missing)
     if not fields["age"]:
         am = re.search(r'\bAge[:\s]*([0-9]{1,3})\b', full_text, re.IGNORECASE)
         if am:
-            fields["age"] = am.group(1)
+            age_val = am.group(1)
+            fields["age"] = age_val
+            confidence_scores["age"] = _calculate_confidence_for_text(texts, scores, age_val)
 
     # ID_NUMBER: try common patterns
     if not fields["id_number"]:
         id_m = re.search(r'\b(ID(?:\s*Number)?|Passport(?:\s*No(?:\.)?)?)[:\s]*([A-Z0-9\-]{5,30})\b', full_text, re.I)
         if id_m:
-            fields["id_number"] = id_m.group(2).strip()
+            id_val = id_m.group(2).strip()
+            fields["id_number"] = id_val
+            confidence_scores["id_number"] = _calculate_confidence_for_text(texts, scores, id_val)
 
-    # final cleanups: trim again
+    # final cleanups: trim again and format output
+    result = {}
     for k, v in list(fields.items()):
         if isinstance(v, str):
             v = v.strip(" \t\n\r,:;")
             fields[k] = v if v else None
+        
+        # Format each field with value and confidence
+        result[k] = {
+            "value": fields[k],
+            "confidence": confidence_scores[k]
+        }
 
-    return fields
+    return result

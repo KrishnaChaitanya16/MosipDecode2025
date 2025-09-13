@@ -2,8 +2,11 @@ from fastapi import FastAPI, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from app.extraction import extract_text, map_fields
 from app.verification import verify_fields
+from fastapi.responses import JSONResponse
+import json
 from app.chinese_extraction import extract_chinese_text
 import shutil
+import uuid
 import os
 
 app = FastAPI(title="OCR Extraction & Verification API")
@@ -43,22 +46,31 @@ async def extract(document: UploadFile = File(...)):
 
 
 @app.post("/verify")
-async def verify(
-    document: UploadFile = File(...),
-    name: str = Form(None),
-    dob: str = Form(None),
-    id_number: str = Form(None),
-):
-    """Verify submitted form data against scanned document"""
-    temp_path = os.path.join(UPLOAD_DIR, document.filename)
-    with open(temp_path, "wb") as buffer:
-        shutil.copyfileobj(document.file, buffer)
+async def verify(file: UploadFile = File(...), submitted_data: str = Form(...)):
+    """
+    Verify submitted form data against OCR extracted fields.
+    """
+    # Parse JSON string into dict
+    try:
+        submitted_data = json.loads(submitted_data)
+    except json.JSONDecodeError:
+        return JSONResponse(
+            status_code=400,
+            content={"error": "submitted_data must be valid JSON string"}
+        )
 
-    submitted_data = {"name": name, "dob": dob, "id_number": id_number}
-    result = verify_fields(submitted_data, extract_text(temp_path))
+    # Create a temp file safely (works on Windows/Linux/Mac)
+    tmp_path = os.path.join(UPLOAD_DIR, file.filename)
 
-    return {"verification": result}
+    with open(tmp_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
 
+    try:
+        result = verify_fields(submitted_data, tmp_path)
+        return JSONResponse(content={"verification_result": result})
+    finally:
+        if os.path.exists(tmp_path):
+            os.remove(tmp_path)
 
 @app.post("/chinese_extract")
 async def chinese_extract(document: UploadFile = File(...)):
