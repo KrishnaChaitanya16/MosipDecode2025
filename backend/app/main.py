@@ -8,6 +8,7 @@ from app.chinese_extraction import extract_chinese_text
 import shutil
 import uuid
 import os
+from app.quality import check_image_quality
 
 app = FastAPI(title="OCR Extraction & Verification API")
 
@@ -37,10 +38,14 @@ async def extract(document: UploadFile = File(...)):
     temp_path = os.path.join(UPLOAD_DIR, document.filename)
     with open(temp_path, "wb") as buffer:
         shutil.copyfileobj(document.file, buffer)
+    quality_report = check_image_quality(temp_path)  # this returns {"score": int, "suggestions": [...]}
+    if quality_report["score"] < 60:
+        return {
+            "error": "Image quality too poor for reliable OCR.",
+            "quality": quality_report
+        }
 
     text = extract_text(temp_path)
-    new_text = " ".join(text["texts"])
-    print(new_text)
     fields = map_fields(text)
     return {"mapped_fields": fields}
 
