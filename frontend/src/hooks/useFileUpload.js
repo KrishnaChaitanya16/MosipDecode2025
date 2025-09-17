@@ -1,27 +1,49 @@
 import { useState } from 'react';
 
-export const useFileUpload = () => {
-  const [uploadedFile, setUploadedFile] = useState(null);
+export const useFileUpload = (allowMultiple = false) => {
+  const [uploadedFiles, setUploadedFiles] = useState([]);
 
-  const handleFileUpload = (event) => {
-    const file = event.target.files[0];
-    if (file) {
-      setUploadedFile(file);
+  const handleFileUpload = (files) => {
+    if (allowMultiple) {
+      if (Array.isArray(files)) {
+        setUploadedFiles(prev => [...prev, ...files]);
+      } else {
+        // Single file event
+        const fileList = Array.from(files.target?.files || [files]);
+        setUploadedFiles(prev => [...prev, ...fileList]);
+      }
+    } else {
+      // Single file mode - keep only the first file
+      const file = Array.isArray(files) ? files[0] : (files.target?.files?.[0] || files);
+      setUploadedFiles(file ? [file] : []);
     }
   };
 
   const setFileFromCamera = (file) => {
-    setUploadedFile(file);
+    if (allowMultiple) {
+      setUploadedFiles(prev => [...prev, file]);
+    } else {
+      setUploadedFiles([file]);
+    }
   };
 
-  const clearFile = () => {
-    setUploadedFile(null);
+  const removeFile = (index) => {
+    setUploadedFiles(prev => prev.filter((_, i) => i !== index));
   };
+
+  const clearFiles = () => {
+    setUploadedFiles([]);
+  };
+
+  // For backward compatibility
+  const uploadedFile = uploadedFiles.length > 0 ? uploadedFiles[0] : null;
 
   return {
-    uploadedFile,
+    uploadedFiles,
+    uploadedFile, // For backward compatibility
     handleFileUpload,
     setFileFromCamera,
-    clearFile
+    removeFile,
+    clearFiles
   };
 };

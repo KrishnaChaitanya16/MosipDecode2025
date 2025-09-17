@@ -3,6 +3,8 @@ import { FileText, CheckCircle } from 'lucide-react';
 import { styles } from './constants/styles';
 import { useFileUpload } from './hooks/useFileUpload';
 import { useOCRExtraction } from './hooks/useOCRExtraction';
+import { useMultipageOCR } from './hooks/useMultipageOCR';
+import { useBatchOCR } from './hooks/useBatchOCR';
 import { useFormData } from './hooks/useFormData';
 import { useVerification } from './hooks/useVerification';
 import ExtractionTab from './components/tabs/ExtractionTab';
@@ -13,10 +15,13 @@ const OCRProjectUI = () => {
   const [selectedTemplate, setSelectedTemplate] = useState('english');
 
   const { 
-    uploadedFile, 
+    uploadedFiles,
+    uploadedFile, // For backward compatibility
     handleFileUpload, 
-    setFileFromCamera 
-  } = useFileUpload();
+    setFileFromCamera,
+    removeFile,
+    clearFiles
+  } = useFileUpload(true); // Enable multiple files
 
   const { 
     extractedData,
@@ -29,6 +34,33 @@ const OCRProjectUI = () => {
     handleDismissError,
     setExtractedData
   } = useOCRExtraction(selectedTemplate);
+
+  const {
+    multipageData,
+    currentPage,
+    totalPages,
+    pageConfidenceData,
+    isExtractingMultipage,
+    multipageError,
+    multipageErrorDetails,
+    handleMultipageExtract,
+    clearMultipageExtraction,
+    handleDismissMultipageError,
+    goToPage,
+    nextPage,
+    prevPage,
+    updatePageField
+  } = useMultipageOCR(selectedTemplate);
+
+  const {
+    batchResults,
+    batchProgress,
+    isBatchProcessing,
+    batchErrors,
+    currentlyProcessing,
+    processBatch,
+    clearBatchResults
+  } = useBatchOCR(selectedTemplate);
 
   const { 
     verificationData,
@@ -48,25 +80,65 @@ const OCRProjectUI = () => {
   const handleTemplateChange = (template) => {
     setSelectedTemplate(template);
     clearExtraction();
+    clearMultipageExtraction();
+    clearBatchResults();
   };
 
   const handleCameraCapture = (file) => {
     setFileFromCamera(file);
     clearExtraction();
-  };
-
-  const handleFileUploadWithClear = (event) => {
-    handleFileUpload(event);
-    clearExtraction();
+    clearMultipageExtraction();
+    clearBatchResults();
     clearVerificationResult();
   };
 
-  const handleRetryExtraction = (file) => {
+  const handleFileUploadWithClear = (files) => {
+    handleFileUpload(files);
+    clearExtraction();
+    clearMultipageExtraction();
+    clearBatchResults();
+    clearVerificationResult();
+  };
+
+  const handleExtractWithClear = (file) => {
+    clearVerificationResult();
+    clearMultipageExtraction();
+    clearBatchResults();
     handleExtract(file);
+  };
+
+  const handleMultipageExtractWithClear = (file) => {
+    clearVerificationResult();
+    clearExtraction();
+    clearBatchResults();
+    handleMultipageExtract(file);
+  };
+
+  const handleBatchProcessWithClear = (files, isMultipage) => {
+    clearVerificationResult();
+    clearExtraction();
+    clearMultipageExtraction();
+    processBatch(files, isMultipage);
+  };
+
+  const handleRetryExtraction = (file) => {
+    clearVerificationResult();
+    handleExtract(file);
+  };
+
+  const handleRetryMultipageExtraction = (file) => {
+    clearVerificationResult();
+    handleMultipageExtract(file);
   };
 
   const handleFieldChange = (fieldId, value) => {
     setExtractedData(prev => ({ ...prev, [fieldId]: value }));
+  };
+
+  const handleUpdateBatchField = (fileKey, pageNumOrFieldId, fieldIdOrValue, value) => {
+    // Handle both single page and multipage batch updates
+    // This is a placeholder - implement based on your batch results structure
+    console.log('Update batch field:', { fileKey, pageNumOrFieldId, fieldIdOrValue, value });
   };
 
   const handleUseExtractedData = (data) => {
@@ -122,10 +194,11 @@ const OCRProjectUI = () => {
         <div>
           {activeTab === 'extraction' && (
             <ExtractionTab
-              uploadedFile={uploadedFile}
+              uploadedFiles={uploadedFiles}
               onFileUpload={handleFileUploadWithClear}
               onCameraCapture={handleCameraCapture}
-              onExtract={handleExtract}
+              onRemoveFile={removeFile}
+              onExtract={handleExtractWithClear}
               isExtracting={isExtracting}
               extractError={extractError}
               errorDetails={errorDetails}
@@ -136,12 +209,36 @@ const OCRProjectUI = () => {
               selectedTemplate={selectedTemplate}
               onTemplateChange={handleTemplateChange}
               onFieldChange={handleFieldChange}
+              // Multipage props
+              multipageData={multipageData}
+              currentPage={currentPage}
+              totalPages={totalPages}
+              pageConfidenceData={pageConfidenceData}
+              isExtractingMultipage={isExtractingMultipage}
+              multipageError={multipageError}
+              multipageErrorDetails={multipageErrorDetails}
+              onMultipageExtract={handleMultipageExtractWithClear}
+              onRetryMultipage={handleRetryMultipageExtraction}
+              onDismissMultipageError={handleDismissMultipageError}
+              onGoToPage={goToPage}
+              onNextPage={nextPage}
+              onPrevPage={prevPage}
+              onUpdatePageField={updatePageField}
+              // Batch processing props
+              batchResults={batchResults}
+              batchProgress={batchProgress}
+              isBatchProcessing={isBatchProcessing}
+              batchErrors={batchErrors}
+              currentlyProcessing={currentlyProcessing}
+              onBatchProcess={handleBatchProcessWithClear}
+              onClearBatchResults={clearBatchResults}
+              onUpdateBatchField={handleUpdateBatchField}
             />
           )}
           {activeTab === 'verification' && (
             <VerificationTab
-              uploadedFile={uploadedFile}
-              onFileUpload={handleFileUploadWithClear}
+              uploadedFile={uploadedFile} // Use single file for verification
+              onFileUpload={(event) => handleFileUploadWithClear([event.target.files[0]])}
               onCameraCapture={handleCameraCapture}
               verificationData={verificationData}
               onVerificationFieldChange={updateVerificationField}
@@ -161,7 +258,7 @@ const OCRProjectUI = () => {
 
         {/* Footer */}
         <div style={styles.footer}>
-          <p>Built with React.js • Supports PDF, JPG, PNG • Multi-language OCR</p>
+          <p>Built with React.js • Supports PDF, JPG, PNG • Multi-language OCR • Multipage & Batch Support</p>
         </div>
       </div>
     </div>

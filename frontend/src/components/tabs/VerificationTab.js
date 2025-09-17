@@ -37,7 +37,7 @@ const VerificationTab = ({
         <div style={{ ...styles.grid, ...styles.grid2, marginBottom: '1.5rem' }}>
           {/* File Upload Section */}
           <div>
-            <h3 style={{ fontSize: '1.125rem', fontWeight: '500', color: '#374151', marginBottom: '1rem' }}>
+            <h3 style={{ fontSize: '1.125rem', fontWeight: '500', color: '#374151', marginBottom: '2.5rem' }}>
               Original Document
             </h3>
             <FileUploadArea 
