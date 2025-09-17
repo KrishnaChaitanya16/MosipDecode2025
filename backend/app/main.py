@@ -39,7 +39,7 @@ async def extract(document: UploadFile = File(...)):
     with open(temp_path, "wb") as buffer:
         shutil.copyfileobj(document.file, buffer)
     quality_report = check_image_quality(temp_path)  # this returns {"score": int, "suggestions": [...]}
-    if quality_report["score"] < 60:
+    if quality_report["score"] < 55:
         return {
             "error": "Image quality too poor for reliable OCR.",
             "quality": quality_report
