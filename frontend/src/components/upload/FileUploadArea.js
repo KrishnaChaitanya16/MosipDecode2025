@@ -23,10 +23,26 @@ const FileUploadArea = ({ onFileUpload, uploadedFiles = [], onCameraCapture, onR
   };
 
   const handleFileInputChange = (event) => {
-    const files = Array.from(event.target.files);
-    if (files.length > 0) {
-      onFileUpload(files);
+    console.log('📁 FileUploadArea: handleFileInputChange called');
+    console.log('📁 Event target:', event.target);
+    console.log('📁 Files:', event.target.files);
+    
+    if (!event || !event.target || !event.target.files) {
+      console.error('❌ Invalid event or files in handleFileInputChange');
+      return;
     }
+
+    const files = Array.from(event.target.files);
+    console.log('📁 Processed files:', files.length);
+    
+    if (files.length > 0) {
+      if (allowMultiple) {
+        onFileUpload(files);
+      } else {
+        onFileUpload([files[0]]); // Single file mode
+      }
+    }
+    
     // Clear input to allow selecting same files again
     event.target.value = '';
   };

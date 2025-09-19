@@ -23,6 +23,9 @@ const VerificationTab = ({
   onClearVerificationResult
 }) => {
   const canStartVerification = uploadedFile && Object.keys(verificationData).length > 0;
+  
+  // Show results only when not verifying and has result
+  const showResults = !isVerifying && verificationResult;
 
   return (
     <div>
@@ -34,21 +37,49 @@ const VerificationTab = ({
           <h2 style={styles.cardTitle}>Data Verification Setup</h2>
         </div>
         
-        <div style={{ ...styles.grid, ...styles.grid2, marginBottom: '1.5rem' }}>
+        <div style={{ ...styles.grid, ...styles.grid2, marginBottom: '1.5rem', alignItems: 'flex-start' }}>
           {/* File Upload Section */}
           <div>
-            <h3 style={{ fontSize: '1.125rem', fontWeight: '500', color: '#374151', marginBottom: '2.5rem' }}>
+            <h3 style={{ 
+              fontSize: '1.125rem', 
+              fontWeight: '500', 
+              color: '#374151', 
+              marginBottom: '1rem',
+              height: '1.75rem', // Fixed height for alignment
+              display: 'flex',
+              alignItems: 'center'
+            }}>
               Original Document
             </h3>
             <FileUploadArea 
-              onFileUpload={onFileUpload} 
-              uploadedFile={uploadedFile}
+              onFileUpload={(files) => {
+                // Handle single file for verification
+                console.log('📁 Verification file upload:', files);
+                if (Array.isArray(files) && files.length > 0) {
+                  onFileUpload([files[0]]); // Only take the first file
+                } else if (files && files.length > 0) {
+                  onFileUpload([files[0]]);
+                }
+              }}
+              uploadedFiles={uploadedFile ? [uploadedFile] : []} 
               onCameraCapture={onCameraCapture}
+              allowMultiple={false}
             />
           </div>
 
           {/* Data Entry Section */}
           <div>
+            <h3 style={{ 
+              fontSize: '1.125rem', 
+              fontWeight: '500', 
+              color: '#374151', 
+              marginBottom: '1rem',
+              height: '1.75rem', // Fixed height for alignment
+              display: 'flex',
+              alignItems: 'center'
+            }}>
+              Enter Verification Data
+            </h3>
             <DataEntryForm
               verificationData={verificationData}
               onFieldChange={onVerificationFieldChange}
@@ -80,33 +111,27 @@ const VerificationTab = ({
 
         {/* Start Verification Button */}
         <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
-        
-        <button 
-        onClick={() => {
-            console.log('🔘 Start Verification button clicked');
-            console.log('📁 File:', uploadedFile ? uploadedFile.name : 'No file');
-            console.log('📝 Data:', verificationData);
-            onStartVerification(uploadedFile, verificationData);
-        }}
-        disabled={!canStartVerification || isVerifying}
-        style={{ 
-            ...styles.button, 
-            ...styles.purpleButton, 
-            padding: '0.75rem 1.5rem',
-            opacity: (!canStartVerification || isVerifying) ? 0.6 : 1
-        }}
-        >
-        {isVerifying ? (
-            <>
-            <RefreshCw size={16} style={{ animation: 'spin 1s linear infinite' }} />
-            Verifying...
-            </>
-        ) : (
-            'Start Verification'
-        )}
-        </button>
+          <button 
+            onClick={() => onStartVerification(uploadedFile, verificationData)}
+            disabled={!canStartVerification || isVerifying}
+            style={{ 
+              ...styles.button, 
+              ...styles.purpleButton, 
+              padding: '0.75rem 1.5rem',
+              opacity: (!canStartVerification || isVerifying) ? 0.6 : 1
+            }}
+          >
+            {isVerifying ? (
+              <>
+                <RefreshCw size={16} style={{ animation: 'spin 1s linear infinite' }} />
+                Verifying...
+              </>
+            ) : (
+              'Start Verification'
+            )}
+          </button>
 
-          {verificationResult && (
+          {verificationResult && !isVerifying && (
             <button 
               onClick={onClearVerificationResult}
               style={{ ...styles.button, ...styles.secondaryButton }}
@@ -128,8 +153,15 @@ const VerificationTab = ({
         )}
       </div>
 
-      {/* Verification Results */}
-      {verificationResult && (
+      {/* Verification Results with Smooth Transition - Hide when verifying */}
+      <div style={{
+        maxHeight: showResults ? '2000px' : '0px',
+        opacity: showResults ? 1 : 0,
+        overflow: 'hidden',
+        transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
+        transform: showResults ? 'translateY(0)' : 'translateY(-20px)',
+        marginTop: showResults ? '2rem' : '0'
+      }}>
         <div style={styles.card}>
           <div style={styles.cardHeader}>
             <div style={{ ...styles.iconWrapper, ...styles.orangeIcon }}>
@@ -140,7 +172,7 @@ const VerificationTab = ({
 
           <VerificationResults verificationResult={verificationResult} />
         </div>
-      )}
+      </div>
     </div>
   );
 };

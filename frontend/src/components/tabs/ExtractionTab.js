@@ -1,5 +1,5 @@
-import React from 'react';
-import { FileText, Edit3, Camera, Eye, RotateCcw, Download, CheckCircle, Layers, Users } from 'lucide-react';
+import React, { useState } from 'react';
+import { FileText, Edit3, Camera, Eye, RotateCcw, Download, CheckCircle, Layers, Users, Target } from 'lucide-react';
 import { styles } from '../../constants/styles';
 import { englishFields, chineseFields } from '../../constants/fields';
 import FileUploadArea from '../upload/FileUploadArea';
@@ -7,6 +7,7 @@ import ErrorDisplay from '../common/ErrorDisplay';
 import FormField from '../common/FormField';
 import MultipageExtraction from '../multipage/MultipageExtraction';
 import BatchResults from '../batch/BatchResults';
+import ConfidenceOverlay from '../detection/ConfidenceOverlay';
 
 const ExtractionTab = ({
   uploadedFiles,
@@ -47,19 +48,37 @@ const ExtractionTab = ({
   currentlyProcessing,
   onBatchProcess,
   onClearBatchResults,
-  onUpdateBatchField
+  onUpdateBatchField,
+  // Detection props
+  detectionData,
+  overlayImage,
+  isDetecting,
+  detectionError,
+  onDetectRegions,
+  onExtractWithDetection,
+  onClearDetection
 }) => {
+  const [showDetection, setShowDetection] = useState(true); // Show by default when data exists
+  
   const activeFields = selectedTemplate === 'english' ? englishFields : chineseFields;
   const hasExtractedData = Object.keys(extractedData).length > 0 && Object.values(extractedData).some(value => value !== null && value !== '' && value !== undefined);
   const hasMultipageData = Object.keys(multipageData).length > 0;
   const hasBatchResults = Object.keys(batchResults).length > 0 || Object.keys(batchErrors).length > 0;
+  const hasDetectionData = (detectionData && detectionData.length > 0) || overlayImage;
   
   // Show single page results only when not extracting and has data and no multipage/batch data
-  const showSinglePageResults = !isExtracting && hasExtractedData && !hasMultipageData && !hasBatchResults;
+  const showSinglePageResults = !isExtracting && hasExtractedData && !hasMultipageData && !hasBatchResults && !hasDetectionData;
   
   // Determine if we should show batch mode
   const isBatchMode = uploadedFiles.length > 1;
   const firstFile = uploadedFiles.length > 0 ? uploadedFiles[0] : null;
+
+  console.log('Detection Debug:', { 
+    hasDetectionData, 
+    detectionDataLength: detectionData ? detectionData.length : 0,
+    hasOverlayImage: !!overlayImage,
+    showDetection
+  });
 
   return (
     <div>
@@ -99,7 +118,7 @@ const ExtractionTab = ({
         {uploadedFiles.length > 0 && (
           <div style={{ marginTop: '1.5rem' }}>
             {isBatchMode ? (
-              // Batch Processing Controls
+              // Batch Processing Controls (existing code)
               <div>
                 <div style={{ 
                   backgroundColor: '#eff6ff',
@@ -211,53 +230,117 @@ const ExtractionTab = ({
               </div>
             ) : (
               // Single File Controls
-              <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-                <button 
-                  onClick={() => onExtract(firstFile)} 
-                  disabled={isExtracting || isExtractingMultipage} 
-                  style={{ 
-                    ...styles.button, 
-                    ...styles.primaryButton, 
-                    opacity: (isExtracting || isExtractingMultipage) ? 0.8 : 1 
-                  }}
-                >
-                  <Camera size={16} />
-                  {isExtracting ? 'Extracting…' : 'Extract Text (Single Page)'}
-                </button>
+              <div>
+                <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
+                  <button 
+                    onClick={() => onExtract(firstFile)} 
+                    disabled={isExtracting || isExtractingMultipage || isDetecting} 
+                    style={{ 
+                      ...styles.button, 
+                      ...styles.primaryButton, 
+                      opacity: (isExtracting || isExtractingMultipage || isDetecting) ? 0.8 : 1 
+                    }}
+                  >
+                    <Camera size={16} />
+                    {isExtracting ? 'Extracting…' : 'Extract Text (Single Page)'}
+                  </button>
 
-                <button 
-                  onClick={() => onMultipageExtract(firstFile)} 
-                  disabled={isExtracting || isExtractingMultipage} 
-                  style={{ 
-                    ...styles.button, 
-                    ...styles.purpleButton, 
-                    opacity: (isExtracting || isExtractingMultipage) ? 0.8 : 1 
-                  }}
-                >
-                  <Layers size={16} />
-                  {isExtractingMultipage ? 'Processing Pages…' : 'Extract Multipage'}
-                </button>
+                  <button 
+                    onClick={() => onExtractWithDetection(firstFile)} 
+                    disabled={isExtracting || isExtractingMultipage || isDetecting} 
+                    style={{ 
+                      ...styles.button, 
+                      ...styles.secondaryButton, 
+                      opacity: (isExtracting || isExtractingMultipage || isDetecting) ? 0.8 : 1 
+                    }}
+                  >
+                    <Target size={16} />
+                    {isExtracting ? 'Extracting with Detection…' : 'Extract with Confidence Zones'}
+                  </button>
 
-                <button style={{ ...styles.button, ...styles.secondaryButton }}>
-                  <Eye size={16} />
-                  Preview
-                </button>
+                  <button 
+                    onClick={() => onMultipageExtract(firstFile)} 
+                    disabled={isExtracting || isExtractingMultipage || isDetecting} 
+                    style={{ 
+                      ...styles.button, 
+                      ...styles.purpleButton, 
+                      opacity: (isExtracting || isExtractingMultipage || isDetecting) ? 0.8 : 1 
+                    }}
+                  >
+                    <Layers size={16} />
+                    {isExtractingMultipage ? 'Processing Pages…' : 'Extract Multipage'}
+                  </button>
+
+                  <button style={{ ...styles.button, ...styles.secondaryButton }}>
+                    <Eye size={16} />
+                    Preview
+                  </button>
+                </div>
+
+                {/* Detection-only button */}
+                <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                  <button 
+                    onClick={() => onDetectRegions(firstFile)} 
+                    disabled={isExtracting || isExtractingMultipage || isDetecting} 
+                    style={{ 
+                      ...styles.button, 
+                      ...styles.secondaryButton, 
+                      opacity: (isExtracting || isExtractingMultipage || isDetecting) ? 0.8 : 1 
+                    }}
+                  >
+                    <Target size={16} />
+                    {isDetecting ? 'Detecting Regions…' : 'Show Confidence Zones Only'}
+                  </button>
+
+                  {hasDetectionData && (
+                    <>
+                      <button
+                        onClick={() => setShowDetection(!showDetection)}
+                        style={{
+                          ...styles.button,
+                          ...(showDetection ? styles.primaryButton : styles.secondaryButton)
+                        }}
+                      >
+                        <Eye size={16} />
+                        {showDetection ? 'Hide Detection' : 'Show Detection'}
+                      </button>
+                      
+                      <button
+                        onClick={onClearDetection}
+                        style={{ ...styles.button, ...styles.secondaryButton }}
+                      >
+                        Clear Detection
+                      </button>
+                    </>
+                  )}
+                </div>
               </div>
             )}
           </div>
         )}
         
         <ErrorDisplay
-          error={extractError}
+          error={extractError || detectionError}
           errorDetails={errorDetails}
           onRetry={() => onRetryExtraction(firstFile)}
           onDismiss={onDismissError}
-          isRetrying={isExtracting}
+          isRetrying={isExtracting || isDetecting}
         />
       </div>
 
+      {/* Confidence Overlay - Show when detection data is available */}
+      {hasDetectionData && showDetection && (
+        <ConfidenceOverlay
+          originalImage={firstFile}
+          overlayImage={overlayImage}
+          detections={detectionData || []}
+          onRetryDetection={() => onDetectRegions(firstFile)}
+          isDetecting={isDetecting}
+        />
+      )}
+
       {/* Batch Results */}
-      {hasBatchResults && (
+      {hasBatchResults && !hasDetectionData && (
         <BatchResults
           batchResults={batchResults}
           batchErrors={batchErrors}
@@ -266,7 +349,7 @@ const ExtractionTab = ({
         />
       )}
 
-      {/* Single Page Extracted Form Data */}
+      {/* Single Page Extracted Form Data - Hide when showing detection */}
       <div style={{
         maxHeight: showSinglePageResults ? '2000px' : '0px',
         opacity: showSinglePageResults ? 1 : 0,
@@ -358,23 +441,25 @@ const ExtractionTab = ({
       </div>
 
       {/* Multipage Extraction Results */}
-      <MultipageExtraction
-        multipageData={multipageData}
-        currentPage={currentPage}
-        totalPages={totalPages}
-        pageConfidenceData={pageConfidenceData}
-        isExtractingMultipage={isExtractingMultipage}
-        multipageError={multipageError}
-        multipageErrorDetails={multipageErrorDetails}
-        onRetryMultipage={onRetryMultipage}
-        onDismissMultipageError={onDismissMultipageError}
-        selectedTemplate={selectedTemplate}
-        onGoToPage={onGoToPage}
-        onNextPage={onNextPage}
-        onPrevPage={onPrevPage}
-        onUpdatePageField={onUpdatePageField}
-        uploadedFile={firstFile}
-      />
+      {!hasDetectionData && (
+        <MultipageExtraction
+          multipageData={multipageData}
+          currentPage={currentPage}
+          totalPages={totalPages}
+          pageConfidenceData={pageConfidenceData}
+          isExtractingMultipage={isExtractingMultipage}
+          multipageError={multipageError}
+          multipageErrorDetails={multipageErrorDetails}
+          onRetryMultipage={onRetryMultipage}
+          onDismissMultipageError={onDismissMultipageError}
+          selectedTemplate={selectedTemplate}
+          onGoToPage={onGoToPage}
+          onNextPage={onNextPage}
+          onPrevPage={onPrevPage}
+          onUpdatePageField={onUpdatePageField}
+          uploadedFile={firstFile}
+        />
+      )}
     </div>
   );
 };

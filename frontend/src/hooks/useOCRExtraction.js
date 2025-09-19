@@ -96,6 +96,7 @@ export const useOCRExtraction = (selectedTemplate) => {
     handleExtract,
     clearExtraction,
     handleDismissError,
-    setExtractedData
+    setExtractedData,
+    setConfidenceData // Add this line
   };
 };
