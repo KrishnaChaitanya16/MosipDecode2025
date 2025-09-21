@@ -537,7 +537,6 @@ def _calculate_confidence_for_text(texts: List[str], scores: List[float], extrac
     else:
         return sum(scores) / len(scores) if scores else 0.0
 
-# Keep your existing map_fields function unchanged
 def map_fields(result: Dict) -> Dict:
     """
     Robust mapping of OCR result -> structured fields.
@@ -560,10 +559,22 @@ def map_fields(result: Dict) -> Dict:
     texts = []
     scores = []
 
-    if isinstance(result, dict) and isinstance(result.get("texts"), list):
-        texts = result["texts"]
-        scores = result.get("scores", [])
-        full_text = " ".join(texts)
+    # UPDATED: Handle detection data format properly
+    if isinstance(result, dict):
+        if "detections" in result:
+            # This is from extract_text_with_detection - use detection data
+            logger.info("Processing detection-based result")
+            for detection in result["detections"]:
+                texts.append(detection["text"])
+                scores.append(detection["confidence"])
+            full_text = " ".join(texts)
+        elif isinstance(result.get("texts"), list):
+            # This is from regular extract_text
+            texts = result["texts"]
+            scores = result.get("scores", [])
+            full_text = " ".join(texts)
+        else:
+            return {field: {"value": None, "confidence": None} for field in fields.keys()}
     elif isinstance(result, str):
         full_text = result
         texts = [result]
@@ -572,10 +583,119 @@ def map_fields(result: Dict) -> Dict:
         return {field: {"value": None, "confidence": None} for field in fields.keys()}
 
     full_text = re.sub(r'\s+', ' ', full_text).strip()
-    logger.info(f"Full Text: {full_text}")
+    logger.info(f"Full Text for mapping: {full_text}")
+    logger.info(f"Individual texts: {texts}")
 
-    # Your existing mapping logic here...
-    # (Process each text segment individually, pattern matching, etc.)
+    # EXISTING LOGIC: Your original pattern matching logic (unchanged)
+    
+    # Process each text segment individually first
+    for i, text in enumerate(texts):
+        confidence = scores[i] if i < len(scores) else 0.0
+        text_lower = text.lower().strip()
+        logger.info(f"Processing text segment: '{text}' with confidence: {confidence}")
+
+        # Direct pattern matching for common formats
+        if re.match(r'name\s*:\s*(.+)', text_lower):
+            name_match = re.search(r'name\s*:\s*(.+)', text_lower)
+            if name_match:
+                name_value = name_match.group(1).strip()
+                # Remove extra text after the name
+                name_value = re.sub(r'\b(age|gender|years|male|female)\b.*$', '', name_value, flags=re.IGNORECASE).strip()
+                if name_value:
+                    fields["name"] = name_value
+                    confidence_scores["name"] = confidence
+                    logger.info(f"Found name: {name_value}")
+        elif re.match(r'age\s*:\s*(\d+)', text_lower):
+            age_match = re.search(r'age\s*:\s*(\d+)', text_lower)
+            if age_match:
+                fields["age"] = age_match.group(1)
+                confidence_scores["age"] = confidence
+                logger.info(f"Found age: {age_match.group(1)}")
+        elif re.match(r'gender\s*:\s*(.+)', text_lower):
+            gender_match = re.search(r'gender\s*:\s*(.+)', text_lower)
+            if gender_match:
+                gender_value = gender_match.group(1).strip()
+                # Clean gender value
+                gender_value = re.sub(r'\b(age|years|name)\b.*$', '', gender_value, flags=re.IGNORECASE).strip()
+                if gender_value:
+                    fields["gender"] = gender_value
+                    confidence_scores["gender"] = confidence
+                    logger.info(f"Found gender: {gender_value}")
+        elif re.match(r'(country|nationality)\s*:\s*(.+)', text_lower):
+            country_match = re.search(r'(country|nationality)\s*:\s*(.+)', text_lower)
+            if country_match:
+                country_value = country_match.group(2).strip()
+                if country_value:
+                    fields["country"] = country_value
+                    confidence_scores["country"] = confidence
+                    logger.info(f"Found country: {country_value}")
+
+    # EXISTING LOGIC: Your original regex-based extraction (unchanged)
+    
+    # Find labeled values using your existing regex patterns
+    matches = []
+    for m in _LABEL_RE.finditer(full_text):
+        label_text = m.group(1).lower()
+        field = _LABEL_TO_FIELD.get(label_text)
+        if field:
+            matches.append({
+                "field": field,
+                "label": label_text,
+                "start": m.start(),
+                "end": m.end()
+            })
+
+    if matches:
+        matches = sorted(matches, key=lambda x: x["start"])
+        for i, mm in enumerate(matches):
+            start_val = mm["end"]
+            end_val = matches[i + 1]["start"] if i + 1 < len(matches) else len(full_text)
+            raw_val = full_text[start_val:end_val]
+            val = _normalize_value_between_labels(raw_val)
+            fld = mm["field"]
+
+            if fields[fld] is None:  # Only fill if not already found by detection parsing
+                extracted_value = None
+                if fld == "email":
+                    extracted_value = _extract_email(val) or val or None
+                elif fld == "phone":
+                    extracted_value = _extract_phone(val) or val or None
+                elif fld == "age":
+                    extracted_value = _extract_age(val) or val or None
+                elif fld == "name":
+                    # Remove common interfering words from name
+                    val = re.sub(r'(?i)\b(age|gender|address|country|phone|email|id|dob|passport)\b.*$', '', val).strip()
+                    extracted_value = val or None
+                else:
+                    extracted_value = val or None
+
+                if extracted_value:
+                    fields[fld] = extracted_value
+                    confidence_scores[fld] = _calculate_confidence_for_text(texts, scores, extracted_value)
+
+    # EXISTING LOGIC: Your fallback patterns (unchanged)
+    
+    # Additional fallback patterns for common formats
+    if not fields["email"]:
+        email_val = _extract_email(full_text)
+        if email_val:
+            fields["email"] = email_val
+            confidence_scores["email"] = _calculate_confidence_for_text(texts, scores, email_val)
+
+    if not fields["phone"]:
+        phone_val = _extract_phone(full_text)
+        if phone_val:
+            fields["phone"] = phone_val
+            confidence_scores["phone"] = _calculate_confidence_for_text(texts, scores, phone_val)
+
+    # Extract standalone age if not found
+    if not fields["age"]:
+        age_val = _extract_age(full_text)
+        if age_val:
+            fields["age"] = age_val
+            confidence_scores["age"] = _calculate_confidence_for_text(texts, scores, age_val)
+
+    # EXISTING LOGIC: Your cleanup and output (unchanged)
     
     # Clean up values and prepare final output
     result_out = {}

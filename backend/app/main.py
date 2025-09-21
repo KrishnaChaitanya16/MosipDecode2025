@@ -66,7 +66,7 @@ async def extract(document: UploadFile = File(...), include_detection: str = For
             quality_report = check_image_quality(temp_path)
             logger.info(f"Quality Report: {quality_report['score']}")
             
-            if quality_report["score"] < 60:
+            if quality_report["score"] < 40:
                 return {
                     "error": "Image quality too poor for reliable OCR.",
                     "quality": quality_report
@@ -251,7 +251,7 @@ async def extract_multipage(document: UploadFile = File(...), multipage: str = F
         elif file_extension not in ['tiff', 'tif']:
             # For single image files, treat as single page
             quality_report = check_image_quality(temp_path)
-            if quality_report["score"] < 55:
+            if quality_report["score"] < 40:
                 return {
                     "error": "Image quality too poor for reliable OCR.",
                     "quality": quality_report
@@ -430,3 +430,224 @@ def verify_fields_with_extracted_data(submitted_data, extracted_data):
     verification_result["verification_summary"]["overall_match_rate"] = matched / total if total > 0 else 0.0
     
     return verification_result
+
+@app.post("/verify")
+async def verify_file(
+    document: UploadFile = File(...), 
+    verification_data: str = Form(...)
+):
+    """
+    Verify submitted form data against OCR extracted fields.
+    """
+    file_id = str(uuid.uuid4())
+    temp_path = os.path.join(UPLOAD_DIR, f"{file_id}_{document.filename}")
+    
+    with open(temp_path, "wb") as buffer:
+        shutil.copyfileobj(document.file, buffer)
+    
+    try:
+        # Parse the verification data JSON string
+        try:
+            submitted_data = json.loads(verification_data)
+            logger.info(f"📝 Submitted data for verification: {submitted_data}")
+        except json.JSONDecodeError as e:
+            return JSONResponse(
+                status_code=400,
+                content={"error": f"Invalid JSON in verification_data: {str(e)}"}
+            )
+        
+        # Check if file exists and is readable
+        if not os.path.exists(temp_path):
+            return JSONResponse(
+                status_code=400,
+                content={"error": "Failed to save uploaded file"}
+            )
+        
+        logger.info(f"🔍 Starting verification for file: {temp_path}")
+        
+        # Call your verification function
+        verification_result = verify_fields(submitted_data, temp_path)
+        
+        logger.info(f"✅ Verification completed: {verification_result.get('verification_summary', {})}")
+        
+        return JSONResponse(content={
+            "success": True,
+            "verification_result": verification_result
+        })
+        
+    except Exception as e:
+        logger.error(f"❌ Verification failed: {str(e)}")
+        return JSONResponse(
+            status_code=500,
+            content={
+                "error": f"Verification failed: {str(e)}",
+                "success": False
+            }
+        )
+    finally:
+        # Clean up temp file
+        if os.path.exists(temp_path):
+            os.remove(temp_path)
+            logger.info(f"🧹 Cleaned up temp file: {temp_path}")
+
+@app.post("/verify/multipage")
+async def verify_multipage_file(
+    document: UploadFile = File(...),
+    verification_data: str = Form(...)
+):
+    """
+    Verify submitted form data against multipage OCR extracted fields.
+    """
+    file_id = str(uuid.uuid4())
+    temp_path = os.path.join(UPLOAD_DIR, f"{file_id}_{document.filename}")
+    
+    with open(temp_path, "wb") as buffer:
+        shutil.copyfileobj(document.file, buffer)
+    
+    try:
+        # Parse the verification data JSON string
+        try:
+            submitted_data = json.loads(verification_data)
+            logger.info(f"📝 Multipage submitted data: {submitted_data}")
+        except json.JSONDecodeError as e:
+            return JSONResponse(
+                status_code=400,
+                content={"error": f"Invalid JSON in verification_data: {str(e)}"}
+            )
+        
+        # Extract text from all pages first
+        multipage_results = extract_multipage_text(temp_path)
+        
+        if not multipage_results or "pages" not in multipage_results:
+            return JSONResponse(
+                status_code=400,
+                content={"error": "Failed to extract text from multipage document"}
+            )
+        
+        # Verify against each page
+        page_verifications = {}
+        overall_verification = {
+            "verification_summary": {
+                "total_fields": len(submitted_data),
+                "matched_fields": 0,
+                "mismatched_fields": 0,
+                "not_found_fields": 0,
+                "overall_match_rate": 0.0
+            },
+            "field_results": {},
+            "pages": {}
+        }
+        
+        for page_num, page_data in multipage_results["pages"].items():
+            page_text = page_data.get("text", "")
+            page_fields = map_multipage_fields(page_text, int(page_num))
+            
+            # Create a temporary verification for this page
+            page_verification = verify_fields_with_extracted_data(submitted_data, page_fields)
+            page_verifications[page_num] = page_verification
+        
+        # Aggregate results from all pages (simple approach - take best match)
+        # You might want to implement more sophisticated logic here
+        best_matches = {}
+        for field in submitted_data.keys():
+            best_score = 0
+            best_result = None
+            
+            for page_num, page_verification in page_verifications.items():
+                if field in page_verification["field_results"]:
+                    field_result = page_verification["field_results"][field]
+                    if field_result["similarity_score"] > best_score:
+                        best_score = field_result["similarity_score"]
+                        best_result = field_result
+                        best_result["found_on_page"] = page_num
+            
+            if best_result:
+                overall_verification["field_results"][field] = best_result
+                if best_result["status"] == "MATCH":
+                    overall_verification["verification_summary"]["matched_fields"] += 1
+                else:
+                    overall_verification["verification_summary"]["mismatched_fields"] += 1
+            else:
+                overall_verification["verification_summary"]["not_found_fields"] += 1
+                overall_verification["field_results"][field] = {
+                    "submitted": submitted_data[field],
+                    "extracted": None,
+                    "status": "NOT_FOUND",
+                    "similarity_score": 0.0,
+                    "extraction_confidence": 0.0,
+                    "overall_confidence": 0.0,
+                    "found_on_page": None
+                }
+        
+        # Calculate overall match rate
+        total = overall_verification["verification_summary"]["total_fields"]
+        matched = overall_verification["verification_summary"]["matched_fields"]
+        overall_verification["verification_summary"]["overall_match_rate"] = matched / total if total > 0 else 0.0
+        
+        overall_verification["pages"] = page_verifications
+        
+        return JSONResponse(content={
+            "success": True,
+            "verification_result": overall_verification,
+            "total_pages": multipage_results.get("total_pages", 0)
+        })
+        
+    except Exception as e:
+        logger.error(f"❌ Multipage verification failed: {str(e)}")
+        return JSONResponse(
+            status_code=500,
+            content={
+                "error": f"Multipage verification failed: {str(e)}",
+                "success": False
+            }
+        )
+    finally:
+        # Clean up temp file
+        if os.path.exists(temp_path):
+            os.remove(temp_path)
+
+@app.post("/chinese_extract")
+async def chinese_extract(document: UploadFile = File(...)):
+    """Extract Chinese text from document"""
+    file_id = str(uuid.uuid4())
+    temp_path = os.path.join(UPLOAD_DIR, f"{file_id}_{document.filename}")
+    
+    with open(temp_path, "wb") as buffer:
+        shutil.copyfileobj(document.file, buffer)
+    
+    try:
+        # Check quality first
+        quality_report = check_image_quality(temp_path)
+        logger.info(f"Chinese extraction - Quality Report: {quality_report['score']}")
+        
+        if quality_report["score"] < 40:
+            return {
+                "error": "Image quality too poor for reliable Chinese OCR.",
+                "quality": quality_report
+            }
+        
+        # Extract Chinese text
+        chinese_result = extract_chinese_text(temp_path)
+        
+        if "error" in chinese_result:
+            return {"error": chinese_result["error"]}
+        
+        # Map Chinese fields
+        chinese_fields = map_fields(chinese_result)
+        
+        return {
+            "mapped_fields": chinese_fields,
+            "quality": quality_report,
+            "language": "chinese",
+            "processing_info": {
+                "language": "chinese",
+                "elapsed_time": chinese_result.get("elapsed_time", 0)
+            }
+        }
+        
+    except Exception as e:
+        logger.error(f"❌ Chinese extraction failed: {str(e)}")
+        return {"error": f"Chinese extraction failed: {str(e)}"}
+    finally:
+        if os.path.exists(temp_path):
+            os.remove(temp_path)
