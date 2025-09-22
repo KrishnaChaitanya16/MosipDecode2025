@@ -1,463 +1,147 @@
-import React, { useState } from 'react';
-import { FileText, Edit3, Camera, Eye, RotateCcw, Download, CheckCircle, Layers, Users, Target } from 'lucide-react';
+import React from 'react';
+import { FileText, Edit3, Camera, Layers, Globe, Target } from 'lucide-react';
 import { styles } from '../../constants/styles';
-import { englishFields, chineseFields } from '../../constants/fields';
+import { templates } from '../../constants/fields';
 import FileUploadArea from '../upload/FileUploadArea';
 import ErrorDisplay from '../common/ErrorDisplay';
 import FormField from '../common/FormField';
-import MultipageExtraction from '../multipage/MultipageExtraction';
-import BatchResults from '../batch/BatchResults';
 import ConfidenceOverlay from '../detection/ConfidenceOverlay';
+import MultipageResults from '../batch/BatchResults';
 
 const ExtractionTab = ({
-  uploadedFiles,
-  onFileUpload,
-  onCameraCapture,
-  onRemoveFile,
-  onExtract,
-  isExtracting,
-  extractError,
-  errorDetails,
-  onRetryExtraction,
-  onDismissError,
-  extractedData,
-  confidenceData,
-  selectedTemplate,
-  onTemplateChange,
-  onFieldChange,
-  // Multipage props
-  multipageData,
-  currentPage,
-  totalPages,
-  pageConfidenceData,
-  isExtractingMultipage,
-  multipageError,
-  multipageErrorDetails,
-  onMultipageExtract,
-  onRetryMultipage,
-  onDismissMultipageError,
-  onGoToPage,
-  onNextPage,
-  onPrevPage,
-  onUpdatePageField,
-  // Batch processing props
-  batchResults,
-  batchProgress,
-  isBatchProcessing,
-  batchErrors,
-  currentlyProcessing,
-  onBatchProcess,
-  onClearBatchResults,
-  onUpdateBatchField,
-  // Detection props
-  detectionData,
-  overlayImage,
-  isDetecting,
-  detectionError,
-  onDetectRegions,
-  onExtractWithDetection,
-  onClearDetection
+  // File management
+  uploadedFiles, onFileUpload, onCameraCapture, onRemoveFile,
+  // Template/Language
+  selectedTemplate, onTemplateChange,
+  // Single Page Extraction
+  onExtractSinglePage, singlePageData, isExtractingSingle, singlePageError, singlePageErrorDetails, onDismissSinglePageError,
+  // Multipage Extraction
+  onExtractMultipage, multipageData, isExtractingMultipage, multipageError, multipageErrorDetails, onDismissMultipageError,
+  // Field updates
+  onFieldChange
 }) => {
-  const [showDetection, setShowDetection] = useState(true); // Show by default when data exists
-  
-  const activeFields = selectedTemplate === 'english' ? englishFields : chineseFields;
-  const hasExtractedData = Object.keys(extractedData).length > 0 && Object.values(extractedData).some(value => value !== null && value !== '' && value !== undefined);
-  const hasMultipageData = Object.keys(multipageData).length > 0;
-  const hasBatchResults = Object.keys(batchResults).length > 0 || Object.keys(batchErrors).length > 0;
-  const hasDetectionData = (detectionData && detectionData.length > 0) || overlayImage;
-  
-  // Show single page results only when not extracting and has data and no multipage/batch data
-  const showSinglePageResults = !isExtracting && hasExtractedData && !hasMultipageData && !hasBatchResults && !hasDetectionData;
-  
-  // Determine if we should show batch mode
-  const isBatchMode = uploadedFiles.length > 1;
   const firstFile = uploadedFiles.length > 0 ? uploadedFiles[0] : null;
+  const isProcessing = isExtractingSingle || isExtractingMultipage;
+  const activeTemplate = templates[selectedTemplate];
 
-  console.log('Detection Debug:', { 
-    hasDetectionData, 
-    detectionDataLength: detectionData ? detectionData.length : 0,
-    hasOverlayImage: !!overlayImage,
-    showDetection
-  });
+  const handleSinglePageExtract = () => {
+    if (firstFile) {
+      onExtractSinglePage(firstFile, activeTemplate.langCode);
+    }
+  };
+
+  const handleMultipageExtract = () => {
+    if (firstFile) {
+      onExtractMultipage(firstFile, activeTemplate.langCode);
+    }
+  };
 
   return (
     <div>
+      {/* Step 1: Upload and Language Selection */}
       <div style={styles.card}>
         <div style={styles.cardHeader}>
           <div style={{ ...styles.iconWrapper, ...styles.blueIcon }}>
-            <FileText style={{ width: '1.25rem', height: '1.25rem', color: '#2563eb' }} />
+            <FileText style={{ color: '#2563eb' }} />
           </div>
-          <h2 style={styles.cardTitle}>Document Upload</h2>
-          {isBatchMode && (
-            <div style={{
-              marginLeft: 'auto',
-              padding: '0.25rem 0.75rem',
-              backgroundColor: '#dbeafe',
-              color: '#1e40af',
-              borderRadius: '9999px',
-              fontSize: '0.75rem',
-              fontWeight: '500',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.25rem'
-            }}>
-              <Users size={12} />
-              Batch Mode
-            </div>
-          )}
+          <h2 style={styles.cardTitle}>Upload & Configure</h2>
         </div>
-        
+
         <FileUploadArea 
           onFileUpload={onFileUpload}
           uploadedFiles={uploadedFiles}
           onCameraCapture={onCameraCapture}
           onRemoveFile={onRemoveFile}
-          allowMultiple={true}
+          allowMultiple={false} // Simplified to single file upload for clarity
         />
-        
-        {uploadedFiles.length > 0 && (
-          <div style={{ marginTop: '1.5rem' }}>
-            {isBatchMode ? (
-              // Batch Processing Controls (existing code)
-              <div>
-                <div style={{ 
-                  backgroundColor: '#eff6ff',
-                  border: '1px solid #bfdbfe',
-                  borderRadius: '0.5rem',
-                  padding: '1rem',
-                  marginBottom: '1rem'
-                }}>
-                  <h4 style={{ 
-                    margin: 0, 
-                    marginBottom: '0.5rem',
-                    color: '#1e40af',
-                    fontSize: '0.875rem',
-                    fontWeight: '500'
-                  }}>
-                    Batch Processing Mode
-                  </h4>
-                  <p style={{ 
-                    margin: 0, 
-                    color: '#1d4ed8',
-                    fontSize: '0.75rem'
-                  }}>
-                    {uploadedFiles.length} files selected. Choose processing type below.
-                  </p>
-                </div>
 
-                <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-                  <button 
-                    onClick={() => onBatchProcess(uploadedFiles, false)}
-                    disabled={isBatchProcessing}
-                    style={{ 
-                      ...styles.button, 
-                      ...styles.primaryButton,
-                      opacity: isBatchProcessing ? 0.8 : 1
-                    }}
-                  >
-                    <Users size={16} />
-                    {isBatchProcessing ? 'Processing Batch...' : 'Process as Single Pages'}
-                  </button>
-
-                  <button 
-                    onClick={() => onBatchProcess(uploadedFiles, true)}
-                    disabled={isBatchProcessing}
-                    style={{ 
-                      ...styles.button, 
-                      ...styles.purpleButton,
-                      opacity: isBatchProcessing ? 0.8 : 1
-                    }}
-                  >
-                    <Layers size={16} />
-                    {isBatchProcessing ? 'Processing Multipage...' : 'Process as Multipage'}
-                  </button>
-
-                  {hasBatchResults && (
-                    <button
-                      onClick={onClearBatchResults}
-                      style={{ ...styles.button, ...styles.secondaryButton }}
-                    >
-                      Clear Results
-                    </button>
-                  )}
-                </div>
-
-                {/* Batch Processing Progress */}
-                {isBatchProcessing && (
-                  <div style={{
-                    marginTop: '1rem',
-                    padding: '1rem',
-                    backgroundColor: '#f0f9ff',
-                    borderRadius: '0.5rem',
-                    border: '1px solid #bae6fd'
-                  }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                      <span style={{ fontSize: '0.875rem', fontWeight: '500', color: '#0369a1' }}>
-                        Processing Files...
-                      </span>
-                      <span style={{ fontSize: '0.75rem', color: '#0284c7' }}>
-                        {batchProgress.processed} / {batchProgress.total}
-                      </span>
-                    </div>
-                    
-                    <div style={{
-                      width: '100%',
-                      height: '8px',
-                      backgroundColor: '#e0f2fe',
-                      borderRadius: '4px',
-                      overflow: 'hidden',
-                      marginBottom: '0.5rem'
-                    }}>
-                      <div style={{
-                        width: `${(batchProgress.processed / batchProgress.total) * 100}%`,
-                        height: '100%',
-                        backgroundColor: '#0ea5e9',
-                        transition: 'width 0.3s ease'
-                      }} />
-                    </div>
-                    
-                    {currentlyProcessing && (
-                      <p style={{ 
-                        margin: 0, 
-                        fontSize: '0.75rem', 
-                        color: '#0369a1' 
-                      }}>
-                        Currently processing: {currentlyProcessing}
-                      </p>
-                    )}
-                  </div>
-                )}
-              </div>
-            ) : (
-              // Single File Controls
-              <div>
-                <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
-                  <button 
-                    onClick={() => onExtract(firstFile)} 
-                    disabled={isExtracting || isExtractingMultipage || isDetecting} 
-                    style={{ 
-                      ...styles.button, 
-                      ...styles.primaryButton, 
-                      opacity: (isExtracting || isExtractingMultipage || isDetecting) ? 0.8 : 1 
-                    }}
-                  >
-                    <Camera size={16} />
-                    {isExtracting ? 'Extracting…' : 'Extract Text (Single Page)'}
-                  </button>
-
-                  <button 
-                    onClick={() => onExtractWithDetection(firstFile)} 
-                    disabled={isExtracting || isExtractingMultipage || isDetecting} 
-                    style={{ 
-                      ...styles.button, 
-                      ...styles.secondaryButton, 
-                      opacity: (isExtracting || isExtractingMultipage || isDetecting) ? 0.8 : 1 
-                    }}
-                  >
-                    <Target size={16} />
-                    {isExtracting ? 'Extracting with Detection…' : 'Extract with Confidence Zones'}
-                  </button>
-
-                  <button 
-                    onClick={() => onMultipageExtract(firstFile)} 
-                    disabled={isExtracting || isExtractingMultipage || isDetecting} 
-                    style={{ 
-                      ...styles.button, 
-                      ...styles.purpleButton, 
-                      opacity: (isExtracting || isExtractingMultipage || isDetecting) ? 0.8 : 1 
-                    }}
-                  >
-                    <Layers size={16} />
-                    {isExtractingMultipage ? 'Processing Pages…' : 'Extract Multipage'}
-                  </button>
-
-                  <button style={{ ...styles.button, ...styles.secondaryButton }}>
-                    <Eye size={16} />
-                    Preview
-                  </button>
-                </div>
-
-                {/* Detection-only button */}
-                <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
-                  <button 
-                    onClick={() => onDetectRegions(firstFile)} 
-                    disabled={isExtracting || isExtractingMultipage || isDetecting} 
-                    style={{ 
-                      ...styles.button, 
-                      ...styles.secondaryButton, 
-                      opacity: (isExtracting || isExtractingMultipage || isDetecting) ? 0.8 : 1 
-                    }}
-                  >
-                    <Target size={16} />
-                    {isDetecting ? 'Detecting Regions…' : 'Show Confidence Zones Only'}
-                  </button>
-
-                  {hasDetectionData && (
-                    <>
-                      <button
-                        onClick={() => setShowDetection(!showDetection)}
-                        style={{
-                          ...styles.button,
-                          ...(showDetection ? styles.primaryButton : styles.secondaryButton)
-                        }}
-                      >
-                        <Eye size={16} />
-                        {showDetection ? 'Hide Detection' : 'Show Detection'}
-                      </button>
-                      
-                      <button
-                        onClick={onClearDetection}
-                        style={{ ...styles.button, ...styles.secondaryButton }}
-                      >
-                        Clear Detection
-                      </button>
-                    </>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
+        {firstFile && (
+          <>
+            <div style={styles.templateSelector}>
+              <Globe size={20} style={{ color: '#6b7280' }} />
+              <label htmlFor="template-select" style={styles.templateLabel}>
+                Document Language:
+              </label>
+              <select
+                id="template-select"
+                value={selectedTemplate}
+                onChange={(e) => onTemplateChange(e.target.value)}
+                style={styles.templateSelect}
+                disabled={isProcessing}
+              >
+                {Object.entries(templates).map(([key, value]) => (
+                  <option key={key} value={key}>{value.name}</option>
+                ))}
+              </select>
+            </div>
+            
+            <div style={styles.actionsContainer}>
+              <button 
+                onClick={handleSinglePageExtract} 
+                disabled={isProcessing}
+                style={{ ...styles.button, ...styles.primaryButton }}
+              >
+                <Target size={18} />
+                {isExtractingSingle ? 'Extracting...' : 'Extract Single Page'}
+              </button>
+              <button 
+                onClick={handleMultipageExtract} 
+                disabled={isProcessing}
+                style={{ ...styles.button, ...styles.secondaryButton }}
+              >
+                <Layers size={18} />
+                {isExtractingMultipage ? 'Processing...' : 'Extract All Pages (PDF)'}
+              </button>
+            </div>
+          </>
         )}
         
         <ErrorDisplay
-          error={extractError || detectionError}
-          errorDetails={errorDetails}
-          onRetry={() => onRetryExtraction(firstFile)}
-          onDismiss={onDismissError}
-          isRetrying={isExtracting || isDetecting}
+          error={singlePageError}
+          errorDetails={singlePageErrorDetails}
+          onDismiss={onDismissSinglePageError}
+        />
+         <ErrorDisplay
+          error={multipageError}
+          errorDetails={multipageErrorDetails}
+          onDismiss={onDismissMultipageError}
         />
       </div>
 
-      {/* Confidence Overlay - Show when detection data is available */}
-      {hasDetectionData && showDetection && (
-        <ConfidenceOverlay
-          originalImage={firstFile}
-          overlayImage={overlayImage}
-          detections={detectionData || []}
-          onRetryDetection={() => onDetectRegions(firstFile)}
-          isDetecting={isDetecting}
-        />
-      )}
-
-      {/* Batch Results */}
-      {hasBatchResults && !hasDetectionData && (
-        <BatchResults
-          batchResults={batchResults}
-          batchErrors={batchErrors}
-          selectedTemplate={selectedTemplate}
-          onUpdateField={onUpdateBatchField}
-        />
-      )}
-
-      {/* Single Page Extracted Form Data - Hide when showing detection */}
-      <div style={{
-        maxHeight: showSinglePageResults ? '2000px' : '0px',
-        opacity: showSinglePageResults ? 1 : 0,
-        overflow: 'hidden',
-        transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
-        transform: showSinglePageResults ? 'translateY(0)' : 'translateY(-20px)',
-        marginTop: showSinglePageResults ? '2rem' : '0'
-      }}>
-        <div style={styles.card}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
-            <div style={styles.cardHeader}>
-              <div style={{ ...styles.iconWrapper, ...styles.greenIcon }}>
-                <Edit3 style={{ width: '1.25rem', height: '1.25rem', color: '#16a34a' }} />
-              </div>
-              <h2 style={styles.cardTitle}>Extracted Form Data</h2>
-            </div>
-            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-              <select
-                value={selectedTemplate}
-                onChange={(e) => onTemplateChange(e.target.value)}
-                style={{ ...styles.input, width: 'auto' }}
-              >
-                <option value="english">English Template</option>
-                <option value="chinese">中文模板</option>
-              </select>
-              <button style={{ ...styles.button, ...styles.secondaryButton }}>
-                <RotateCcw size={14} />
-                Re-extract
-              </button>
-              <button style={{ ...styles.button, ...styles.primaryButton }}>
-                <Download size={14} />
-                Export Data
-              </button>
-            </div>
-          </div>
-          
-          <div style={{ ...styles.grid, ...styles.grid2 }}>
-            {activeFields.map(field => (
-              <FormField
-                key={field.id}
-                field={field}
-                value={extractedData[field.id]}
-                confidence={confidenceData[field.id]}
-                onChange={onFieldChange}
-              />
-            ))}
-          </div>
-
-          <div style={styles.summary}>
-            <div style={styles.summaryHeader}>
-              <CheckCircle style={{ width: '1.25rem', height: '1.25rem', color: '#2563eb' }} />
-              <span style={styles.summaryTitle}>Extraction Summary</span>
-            </div>
-            <div style={styles.summaryGrid}>
-              <div>
-                <span style={styles.summaryLabel}>Fields Extracted:</span>
-                <span style={styles.summaryValue}>
-                  {Object.keys(extractedData).filter(key => extractedData[key] !== null && extractedData[key] !== '').length}/
-                  {activeFields.length}
-                </span>
-              </div>
-              {Object.keys(confidenceData).length > 0 && (
-                <div>
-                  <span style={styles.summaryLabel}>Avg Confidence:</span>
-                  <span style={{ 
-                    ...styles.summaryValue, 
-                    color: Object.values(confidenceData).filter(c => c !== null).length > 0 
-                      ? (Object.values(confidenceData).filter(c => c !== null).reduce((a, b) => a + b, 0) / Object.values(confidenceData).filter(c => c !== null).length) > 0.8 
-                        ? '#16a34a' 
-                        : (Object.values(confidenceData).filter(c => c !== null).reduce((a, b) => a + b, 0) / Object.values(confidenceData).filter(c => c !== null).length) > 0.6 
-                          ? '#d97706' 
-                          : '#dc2626'
-                      : '#6b7280'
-                  }}>
-                    {Object.values(confidenceData).filter(c => c !== null).length > 0 
-                      ? Math.round((Object.values(confidenceData).filter(c => c !== null).reduce((a, b) => a + b, 0) / Object.values(confidenceData).filter(c => c !== null).length) * 100) + '%'
-                      : 'N/A'
-                    }
-                  </span>
+      {/* Step 2: View Results */}
+      {singlePageData && (
+        <div style={styles.resultsGrid}>
+            <ConfidenceOverlay
+              originalImage={firstFile}
+              overlayImage={singlePageData.overlayImage}
+              detections={singlePageData.extractedData ? Object.values(singlePageData.extractedData).length : 0}
+            />
+            <div style={styles.card}>
+              <div style={styles.cardHeader}>
+                <div style={{ ...styles.iconWrapper, ...styles.greenIcon }}>
+                  <Edit3 style={{ color: '#16a34a' }} />
                 </div>
-              )}
-              <div>
-                <span style={styles.summaryLabel}>Processing Time:</span>
-                <span style={styles.summaryValue}>2.3s</span>
+                <h2 style={styles.cardTitle}>Extracted Form Data</h2>
+              </div>
+              <div style={{ ...styles.grid, ...styles.grid2 }}>
+                {activeTemplate.fields.map(field => (
+                  <FormField
+                    key={field.id}
+                    field={field}
+                    value={singlePageData.extractedData ? singlePageData.extractedData[field.id] : ''}
+                    confidence={singlePageData.confidenceData ? singlePageData.confidenceData[field.id] : null}
+                    onChange={onFieldChange}
+                  />
+                ))}
               </div>
             </div>
-          </div>
         </div>
-      </div>
+      )}
 
-      {/* Multipage Extraction Results */}
-      {!hasDetectionData && (
-        <MultipageExtraction
-          multipageData={multipageData}
-          currentPage={currentPage}
-          totalPages={totalPages}
-          pageConfidenceData={pageConfidenceData}
-          isExtractingMultipage={isExtractingMultipage}
-          multipageError={multipageError}
-          multipageErrorDetails={multipageErrorDetails}
-          onRetryMultipage={onRetryMultipage}
-          onDismissMultipageError={onDismissMultipageError}
-          selectedTemplate={selectedTemplate}
-          onGoToPage={onGoToPage}
-          onNextPage={onNextPage}
-          onPrevPage={onPrevPage}
-          onUpdatePageField={onUpdatePageField}
-          uploadedFile={firstFile}
+      {multipageData && (
+        <MultipageResults 
+          results={multipageData}
+          template={activeTemplate}
         />
       )}
     </div>

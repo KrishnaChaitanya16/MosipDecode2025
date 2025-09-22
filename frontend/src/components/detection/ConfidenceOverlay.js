@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Eye, EyeOff, Download, RotateCcw, ZoomIn, ZoomOut, Target } from 'lucide-react';
 import { styles } from '../../constants/styles';
 
+
 const ConfidenceOverlay = ({ 
   originalImage, 
   overlayImage, 
@@ -15,6 +16,7 @@ const ConfidenceOverlay = ({
   const canvasRef = useRef(null);
   const containerRef = useRef(null);
 
+
   const confidenceColors = {
     high: '#22c55e',
     medium: '#f59e0b', 
@@ -22,12 +24,14 @@ const ConfidenceOverlay = ({
     very_low: '#6b7280'
   };
 
+
   const confidenceLabels = {
     high: 'High Confidence (90%+)',
     medium: 'Medium Confidence (70-89%)',
     low: 'Low Confidence (50-69%)',
     very_low: 'Very Low Confidence (<50%)'
   };
+
 
   const downloadOverlay = () => {
     if (overlayImage) {
@@ -40,6 +44,7 @@ const ConfidenceOverlay = ({
     }
   };
 
+
   // Create object URL from originalImage if it's a File
   const getImageSrc = () => {
     if (originalImage instanceof File) {
@@ -50,7 +55,9 @@ const ConfidenceOverlay = ({
     return null;
   };
 
+
   const originalImageSrc = getImageSrc();
+
 
   useEffect(() => {
     // Cleanup object URLs when component unmounts
@@ -60,6 +67,16 @@ const ConfidenceOverlay = ({
       }
     };
   }, [originalImage, originalImageSrc]);
+  
+  // Safely compute detection stats only if detections is an array
+  const detectionStats = Array.isArray(detections)
+    ? detections.reduce((acc, detection) => {
+        const level = detection.confidence_level || 'very_low';
+        acc[level] = (acc[level] || 0) + 1;
+        return acc;
+      }, {})
+    : {};
+
 
   if (!originalImageSrc && !overlayImage) {
     return (
@@ -79,11 +96,12 @@ const ConfidenceOverlay = ({
           border: '1px solid #e5e7eb'
         }}>
           <Target size={48} style={{ margin: '0 auto 1rem', color: '#d1d5db' }} />
-          <p>No confidence zone data available. Click "Show Confidence Zones Only" or "Extract with Confidence Zones" to see bounding boxes.</p>
+          <p>No confidence zone data available. Click "Extract Single Page" to see bounding boxes.</p>
         </div>
       </div>
     );
   }
+
 
   return (
     <div style={styles.card}>
@@ -105,9 +123,10 @@ const ConfidenceOverlay = ({
           gap: '0.25rem'
         }}>
           <Target size={12} />
-          {detections.length} Detections
+          {Array.isArray(detections) ? detections.length : 0} Detections
         </div>
       </div>
+
 
       {/* Controls */}
       <div style={{
@@ -144,10 +163,12 @@ const ConfidenceOverlay = ({
             <ZoomOut size={16} />
           </button>
 
+
           <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>
             {Math.round(zoom * 100)}%
           </span>
         </div>
+
 
         <div style={{ display: 'flex', gap: '0.5rem' }}>
           <button
@@ -173,6 +194,7 @@ const ConfidenceOverlay = ({
           </button>
         </div>
       </div>
+
 
       {/* Confidence Legend */}
       <div style={{
@@ -202,6 +224,7 @@ const ConfidenceOverlay = ({
         ))}
       </div>
 
+
       {/* Image Container */}
       <div 
         ref={containerRef}
@@ -225,15 +248,14 @@ const ConfidenceOverlay = ({
               cursor: 'pointer'
             }}
             onClick={(e) => {
-              // Calculate click position relative to image for detection selection
+              if (!Array.isArray(detections)) return;
               const rect = e.target.getBoundingClientRect();
               const x = (e.clientX - rect.left) / zoom;
               const y = (e.clientY - rect.top) / zoom;
               
-              // Find clicked detection
               const clicked = detections.find(detection => {
                 const bbox = detection.bbox;
-                return x >= bbox.x1 && x <= bbox.x2 && y >= bbox.y1 && y <= bbox.y2;
+                return bbox && x >= bbox.x1 && x <= bbox.x2 && y >= bbox.y1 && y <= bbox.y2;
               });
               
               setSelectedDetection(clicked);
@@ -260,6 +282,7 @@ const ConfidenceOverlay = ({
         )}
       </div>
 
+
       {/* Detection Stats */}
       <div style={{
         marginTop: '1rem',
@@ -267,12 +290,7 @@ const ConfidenceOverlay = ({
         gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))',
         gap: '0.75rem'
       }}>
-        {Object.entries(
-          detections.reduce((acc, detection) => {
-            acc[detection.confidence_level] = (acc[detection.confidence_level] || 0) + 1;
-            return acc;
-          }, {})
-        ).map(([level, count]) => (
+        {Object.entries(detectionStats).map(([level, count]) => (
           <div key={level} style={{
             padding: '0.5rem',
             backgroundColor: '#ffffff',
@@ -297,6 +315,7 @@ const ConfidenceOverlay = ({
           </div>
         ))}
       </div>
+
 
       {/* Selected Detection Details */}
       {selectedDetection && (
@@ -344,5 +363,6 @@ const ConfidenceOverlay = ({
     </div>
   );
 };
+
 
 export default ConfidenceOverlay;

@@ -1,69 +1,83 @@
 import { useState } from 'react';
-import { detectTextRegions, extractOCRDataWithDetection } from '../utils/apiService';
+import { extractOCRDataWithDetection } from '../utils/apiService';
+import { parseErrorMessage } from '../utils/errorHandling';
 
 export const useOCRDetection = () => {
-  const [detectionData, setDetectionData] = useState(null);
+  const [extractedData, setExtractedData] = useState(null);
+  const [confidenceData, setConfidenceData] = useState(null);
   const [overlayImage, setOverlayImage] = useState(null);
-  const [isDetecting, setIsDetecting] = useState(false);
-  const [detectionError, setDetectionError] = useState('');
+  const [detections, setDetections] = useState([]);
+  const [isExtracting, setIsExtracting] = useState(false);
+  const [error, setError] = useState('');
+  const [errorDetails, setErrorDetails] = useState(null);
 
-  const detectTextRegionsOnly = async (file) => {
+  const extractWithDetection = async (file, language) => {
     if (!file) return;
 
-    setIsDetecting(true);
-    setDetectionError('');
+    setIsExtracting(true);
+    setError('');
+    setErrorDetails(null);
     
     try {
-      const result = await detectTextRegions(file);
-      setDetectionData(result.detections || []);
-      setOverlayImage(result.confidence_overlay);
-
-    } catch (error) {
-      setDetectionError(error.message || 'Detection failed');
-      console.error('Detection error:', error);
-    } finally {
-      setIsDetecting(false);
-    }
-  };
-
-  const extractWithDetection = async (file) => {
-    if (!file) return null;
-
-    setIsDetecting(true);
-    setDetectionError('');
-    
-    try {
-      const result = await extractOCRDataWithDetection(file);
+      const result = await extractOCRDataWithDetection(file, language);
       
-      if (result.has_detection_data) {
-        setDetectionData(result.detections || []);
-        setOverlayImage(result.confidence_overlay);
+      if (result.error) {
+        const errorMsg = result.error;
+        setError(errorMsg);
+        setErrorDetails(parseErrorMessage(errorMsg));
+        return;
       }
+      
+      const mapped = result.mapped_fields || {};
+      const unwrapped = {};
+      const confidence = {};
+      
+      Object.keys(mapped).forEach((key) => {
+        unwrapped[key] = mapped[key]?.value ?? null;
+        confidence[key] = mapped[key]?.confidence ?? null;
+      });
 
-      return result;
+      setExtractedData(unwrapped);
+      setConfidenceData(confidence);
+      setOverlayImage(result.confidence_overlay);
+      // More robust check to ensure detections is always an array
+      setDetections(Array.isArray(result.detections) ? result.detections : []);
 
-    } catch (error) {
-      setDetectionError(error.message || 'Extraction with detection failed');
-      console.error('Extraction with detection error:', error);
-      throw error;
+    } catch (err) {
+      const errorMsg = err.message || 'Extraction with detection failed.';
+      setError(errorMsg);
+      setErrorDetails(parseErrorMessage(errorMsg));
+      console.error('Extraction with detection error:', err);
     } finally {
-      setIsDetecting(false);
+      setIsExtracting(false);
     }
   };
 
-  const clearDetection = () => {
-    setDetectionData(null);
+  const clearExtraction = () => {
+    setExtractedData(null);
+    setConfidenceData(null);
     setOverlayImage(null);
-    setDetectionError('');
+    setDetections([]);
+    setError('');
+    setErrorDetails(null);
+  };
+
+  const handleDismissError = () => {
+    setError('');
+    setErrorDetails(null);
   };
 
   return {
-    detectionData,
+    extractedData,
+    confidenceData,
     overlayImage,
-    isDetecting,
-    detectionError,
-    detectTextRegions: detectTextRegionsOnly,
+    detections,
+    isExtracting,
+    error,
+    errorDetails,
     extractWithDetection,
-    clearDetection
+    clearExtraction,
+    handleDismissError,
   };
 };
+
