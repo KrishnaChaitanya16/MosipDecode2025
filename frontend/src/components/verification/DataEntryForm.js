@@ -45,55 +45,68 @@ const DataEntryForm = ({
     });
   };
 
+  // Custom horizontal form field component for side-by-side layout
+  const HorizontalFormField = ({ field, value, onChange }) => (
+    <div style={{
+      display: 'flex',
+      alignItems: 'center',
+      gap: 'var(--space-md)',
+      marginBottom: 'var(--space-sm)',
+      padding: 'var(--space-sm)',
+      borderRadius: 'var(--radius-sm)',
+    }}>
+      <label style={{
+        fontSize: '0.9rem',
+        fontWeight: '500',
+        color: 'var(--text-primary)',
+        minWidth: '80px',
+        textAlign: 'left',
+        marginBottom: 0
+      }}>
+        {field.label}:
+      </label>
+      <input
+        type="text"
+        value={value}
+        onChange={(e) => onChange(field.id, e.target.value)}
+        placeholder={`Enter ${field.label.toLowerCase()}`}
+        style={{
+          flex: 1,
+          padding: 'var(--space-sm)',
+          border: '1px solid var(--border-medium)',
+          borderRadius: 'var(--radius-sm)',
+          background: 'var(--bg-primary)',
+          color: 'var(--text-primary)',
+          fontSize: '0.9rem',
+          fontFamily: 'var(--font-family)',
+          transition: 'all var(--transition-fast)',
+          boxSizing: 'border-box'
+        }}
+        onFocus={(e) => {
+          e.target.style.borderColor = 'var(--primary)';
+          e.target.style.boxShadow = '0 0 0 3px rgba(37, 99, 235, 0.1)';
+        }}
+        onBlur={(e) => {
+          e.target.style.borderColor = 'var(--border-medium)';
+          e.target.style.boxShadow = 'none';
+        }}
+      />
+    </div>
+  );
+
   return (
     <div>
       <div style={{ marginBottom: '1.5rem' }}>
-        <h3 style={{ 
-          fontSize: '1.125rem', 
-          fontWeight: '500', 
-          color: '#374151', 
-          marginBottom: '1rem' 
-        }}>
-          Enter Verification Data
-        </h3>
         
-        {/* Method 1: JSON Input */}
-        {/* <div style={{ marginBottom: '1.5rem' }}>
-          <label style={styles.label}>
-            JSON Data Input
-            {jsonError && (
-              <span style={{ color: '#dc2626', marginLeft: '0.5rem', fontSize: '0.75rem' }}>
-                ({jsonError})
-              </span>
-            )}
-          </label>
-          <textarea
-            value={jsonInput}
-            onChange={(e) => handleJsonInputChange(e.target.value)}
-            style={{
-              ...styles.input,
-              height: '120px',
-              fontFamily: 'monospace',
-              fontSize: '0.875rem',
-              ...(jsonError ? { borderColor: '#fca5a5', backgroundColor: '#fef2f2' } : {})
-            }}
-            placeholder='{"name": "John Smith", "age": "30", "gender": "Male", "address": "123 Elm Street"}'
-          />
-        </div> */}
-
-        {/* Method 2: Individual Form Fields */}
+        {/* Method 2: Individual Form Fields with Horizontal Layout */}
         <div style={{ marginBottom: '1.5rem' }}>
-{/*           <h4 style={{ 
-            fontSize: '1rem', 
-            fontWeight: '500', 
-            color: '#374151', 
-            marginBottom: '0.75rem' 
+          <div style={{ 
+            display: 'flex', 
+            flexDirection: 'column', 
+            gap: 'var(--space-xs)' 
           }}>
-            Or fill individual fields:
-          </h4> */}
-          <div style={{ ...styles.grid, ...styles.grid2, gap: '1rem' }}>
             {englishFields.slice(0, 8).map(field => (
-              <FormField
+              <HorizontalFormField
                 key={field.id}
                 field={field}
                 value={verificationData[field.id] || ''}
@@ -106,11 +119,11 @@ const DataEntryForm = ({
         {/* Action Buttons */}
         <div style={{ 
           display: 'flex',
-          gap: '0.75rem',
+          gap: 'var(--space-md)',
           flexWrap: 'wrap',
           alignItems: 'center',
-          paddingTop: '1rem',
-          borderTop: '1px solid #e5e7eb'
+          paddingTop: 'var(--space-lg)',
+          /* borderTop: '1px solid var(--border-light)' */
         }}>
           <button 
             onClick={onClear}
@@ -118,17 +131,8 @@ const DataEntryForm = ({
           >
             Clear All
           </button>
-          <button 
-            onClick={() => onUseExtracted(extractedData)}
-            style={{ ...styles.button, ...styles.primaryButton }}
-            disabled={!extractedData || Object.keys(extractedData).length === 0}
-          >
-            Use Extracted Data
-          </button>
         </div>
       </div>
-
-      {/* Preview Current Data */}
     </div>
   );
 };

@@ -35,7 +35,7 @@ export const useMultipagePdf = () => {
                         return;
                     }
 
-                    const mapped = pageData.mapped_fields || {};
+                    const mapped = pageData.mapped_fields.mapped_fields || {};
                     const unwrapped = {};
                     const confidence = {};
 

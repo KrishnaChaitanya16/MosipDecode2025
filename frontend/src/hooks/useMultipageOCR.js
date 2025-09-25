@@ -48,7 +48,7 @@ export const useMultipageOCR = (selectedTemplate) => {
 
       Object.keys(pages).forEach(pageNum => {
         const pageData = pages[pageNum];
-        const mapped = pageData?.mapped_fields || {};
+        const mapped = pageData?.mapped_fields.mapped_fields || {};
         
         const unwrapped = {};
         const confidence = {};

@@ -4,13 +4,15 @@
  * @param {string} language - The language code for OCR processing (e.g., 'en', 'ch').
  * @returns {Promise<any>} - The JSON response from the API.
  */
+const api_base2 = 'https://unmachineable-mauro-crucially.ngrok-free.dev'
+const api_base = 'http://127.0.0.1:8000';
 export const extractOCRDataWithDetection = async (file, language = 'en') => {
   const formData = new FormData();
   formData.append('document', file);
   formData.append('include_detection', 'true');
   formData.append('language', language);
 
-  const response = await fetch('http://127.0.0.1:8000/extract', {
+  const response = await fetch(`${api_base}/extract`, {
     method: 'POST',
     body: formData
   });
@@ -36,7 +38,7 @@ export const extractMultipagePdfData = async (file, language = 'en') => {
   formData.append('document', file);
   formData.append('language', language);
 
-  const response = await fetch('http://127.0.0.1:8000/extract/pdf/all', {
+  const response = await fetch(`${api_base}/extract/pdf/all`, {
     method: 'POST',
     body: formData
   });
@@ -65,7 +67,7 @@ export const verifyDocumentData = async (file, submittedData) => {
   formData.append('document', file);
   formData.append('verification_data', JSON.stringify(submittedData));
 
-  const response = await fetch('http://127.0.0.1:8000/verify', {
+  const response = await fetch(`${api_base}/verify`, {
     method: 'POST',
     body: formData
   });
@@ -85,7 +87,7 @@ export const verifyDocumentData = async (file, submittedData) => {
  */
 export const checkAPIHealth = async () => {
   try {
-    const response = await fetch('http://127.0.0.1:8000/health');
+    const response = await fetch(`${api_base}/health`);
     if (!response.ok) throw new Error(`Health check failed: ${response.status}`);
     return response.json();
   } catch (error) {

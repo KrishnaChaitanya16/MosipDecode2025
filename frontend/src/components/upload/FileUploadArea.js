@@ -1,5 +1,5 @@
 import React from 'react';
-import { Upload, Camera, X, FileText } from 'lucide-react';
+import { Upload, Camera, X, FileText, Image } from 'lucide-react';
 import { styles } from '../../constants/styles';
 import CameraCapture from './CameraCapture';
 import { useCamera } from '../../hooks/useCamera';
@@ -51,20 +51,28 @@ const FileUploadArea = ({ onFileUpload, uploadedFiles = [], onCameraCapture, onR
     return (bytes / 1024 / 1024).toFixed(2);
   };
 
+  const getFileIcon = (fileName) => {
+    const extension = fileName.split('.').pop().toLowerCase();
+    if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(extension)) {
+      return <Image size={16} />;
+    }
+    return <FileText size={16} />;
+  };
+
   // Handle both single file (legacy) and multiple files
   const filesArray = Array.isArray(uploadedFiles) ? uploadedFiles : (uploadedFiles ? [uploadedFiles] : []);
 
   return (
-    <div>
+    <div style={styles.fileUploadContainer}>
       <div style={styles.uploadArea}>
         <div style={styles.uploadContent}>
           <div style={styles.uploadIconWrapper}>
-            <Upload style={{ width: '2rem', height: '2rem', color: '#2563eb' }} />
+            <Upload size={32} />
           </div>
-          <div>
-            <p style={styles.uploadText}>
+          <div style={styles.uploadTextContent}>
+            <h3 style={styles.uploadText}>
               {allowMultiple ? 'Upload Multiple Documents' : 'Upload Document'}
-            </p>
+            </h3>
             <p style={styles.uploadSubtext}>
               {allowMultiple 
                 ? 'Drag and drop, choose files, or use camera' 
@@ -76,7 +84,7 @@ const FileUploadArea = ({ onFileUpload, uploadedFiles = [], onCameraCapture, onR
             </p>
           </div>
           
-          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+          <div style={styles.uploadActions}>
             <input
               type="file"
               onChange={handleFileInputChange}
@@ -87,8 +95,9 @@ const FileUploadArea = ({ onFileUpload, uploadedFiles = [], onCameraCapture, onR
             />
             <label
               htmlFor={allowMultiple ? "multi-file-upload" : "file-upload"}
-              style={{ ...styles.button, ...styles.primaryButton, cursor: 'pointer' }}
+              style={{ ...styles.button, ...styles.primaryButton, ...styles.uploadButton, cursor: 'pointer' }}
             >
+              <Upload size={16} />
               {allowMultiple ? 'Choose Files' : 'Choose File'}
             </label>
             
@@ -104,47 +113,37 @@ const FileUploadArea = ({ onFileUpload, uploadedFiles = [], onCameraCapture, onR
           
           {/* Display uploaded files */}
           {filesArray.length > 0 && (
-            <div style={{ width: '100%', marginTop: '1rem' }}>
-              <h4 style={{ 
-                fontSize: '0.875rem', 
-                fontWeight: '500', 
-                color: '#374151', 
-                marginBottom: '0.75rem' 
-              }}>
-                {allowMultiple ? `Selected Files (${filesArray.length})` : 'Selected File'}:
-              </h4>
+            <div style={styles.uploadedFiles}>
+              <div style={styles.filesHeader}>
+                <h4 style={styles.filesTitle}>
+                  {allowMultiple ? `Selected Files (${filesArray.length})` : 'Selected File'}:
+                </h4>
+              </div>
               
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              <div style={styles.filesList}>
                 {filesArray.map((file, index) => (
-                  <div
-                    key={`${file.name}-${index}`}
-                    style={{
-                      ...styles.fileInfo,
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      padding: '0.75rem 1rem'
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <FileText size={16} style={{ color: '#15803d' }} />
-                      <div>
-                        <p style={{ ...styles.fileName, margin: 0 }}>{file.name}</p>
-                        <p style={{ ...styles.fileSize, margin: 0 }}>{formatFileSize(file.size)} MB</p>
+                  <div key={`${file.name}-${index}`} style={styles.fileItem}>
+                    <div style={styles.fileInfoContent}>
+                      <div style={styles.fileIcon}>
+                        {getFileIcon(file.name)}
+                      </div>
+                      <div style={styles.fileDetails}>
+                        <p style={styles.fileName}>{file.name}</p>
+                        <p style={styles.fileSize}>{formatFileSize(file.size)} MB</p>
                       </div>
                     </div>
                     
                     {allowMultiple && onRemoveFile && (
                       <button
                         onClick={() => onRemoveFile(index)}
-                        style={{
-                          ...styles.button,
-                          padding: '0.25rem',
-                          backgroundColor: 'transparent',
-                          border: '1px solid #ef4444',
-                          color: '#ef4444'
-                        }}
+                        style={styles.removeFileBtn}
                         title="Remove file"
+                        onMouseEnter={(e) => {
+                          Object.assign(e.target.style, styles.removeFileBtnHover);
+                        }}
+                        onMouseLeave={(e) => {
+                          Object.assign(e.target.style, styles.removeFileBtn);
+                        }}
                       >
                         <X size={14} />
                       </button>
@@ -153,12 +152,8 @@ const FileUploadArea = ({ onFileUpload, uploadedFiles = [], onCameraCapture, onR
                 ))}
               </div>
               
-              {allowMultiple && (
-                <div style={{
-                  marginTop: '0.5rem',
-                  fontSize: '0.75rem',
-                  color: '#6b7280'
-                }}>
+              {allowMultiple && filesArray.length > 1 && (
+                <div style={styles.filesSummary}>
                   Total: {filesArray.length} file{filesArray.length !== 1 ? 's' : ''} 
                   ({filesArray.reduce((total, file) => total + file.size, 0) / 1024 / 1024 < 1 
                     ? `${(filesArray.reduce((total, file) => total + file.size, 0) / 1024).toFixed(0)} KB`

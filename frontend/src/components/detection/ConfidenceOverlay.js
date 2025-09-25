@@ -106,120 +106,42 @@ const ConfidenceOverlay = ({
   return (
     <div style={styles.card}>
       <div style={styles.cardHeader}>
-        <div style={{ ...styles.iconWrapper, ...styles.purpleIcon }}>
-          <Target style={{ width: '1.25rem', height: '1.25rem', color: '#7c3aed' }} />
-        </div>
         <h2 style={styles.cardTitle}>OCR Confidence Zones</h2>
-        <div style={{
-          marginLeft: 'auto',
-          padding: '0.25rem 0.75rem',
-          backgroundColor: '#fef3c7',
-          color: '#92400e',
-          borderRadius: '9999px',
-          fontSize: '0.75rem',
-          fontWeight: '500',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.25rem'
-        }}>
-          <Target size={12} />
-          {Array.isArray(detections) ? detections.length : 0} Detections
-        </div>
-      </div>
-
-
-      {/* Controls */}
-      <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: '1rem',
-        flexWrap: 'wrap',
-        gap: '0.5rem'
-      }}>
-        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-          <button
-            onClick={() => setShowOverlay(!showOverlay)}
-            style={{
-              ...styles.button,
-              ...(showOverlay ? styles.primaryButton : styles.secondaryButton)
-            }}
-          >
-            {showOverlay ? <EyeOff size={16} /> : <Eye size={16} />}
-            {showOverlay ? 'Hide Overlay' : 'Show Overlay'}
-          </button>
-          
-          <button
-            onClick={() => setZoom(Math.min(zoom + 0.25, 3))}
-            style={{ ...styles.button, ...styles.secondaryButton }}
-          >
-            <ZoomIn size={16} />
-          </button>
-          
-          <button
-            onClick={() => setZoom(Math.max(zoom - 0.25, 0.25))}
-            style={{ ...styles.button, ...styles.secondaryButton }}
-          >
-            <ZoomOut size={16} />
-          </button>
-
-
-          <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>
-            {Math.round(zoom * 100)}%
-          </span>
-        </div>
-
-
-        <div style={{ display: 'flex', gap: '0.5rem' }}>
-          <button
-            onClick={onRetryDetection}
-            disabled={isDetecting}
-            style={{
-              ...styles.button,
-              ...styles.secondaryButton,
-              opacity: isDetecting ? 0.6 : 1
-            }}
-          >
-            <RotateCcw size={16} />
-            {isDetecting ? 'Detecting...' : 'Retry Detection'}
-          </button>
-          
-          <button
-            onClick={downloadOverlay}
-            style={{ ...styles.button, ...styles.primaryButton }}
-            disabled={!overlayImage}
-          >
-            <Download size={16} />
-            Download Overlay
-          </button>
-        </div>
       </div>
 
 
       {/* Confidence Legend */}
-      <div style={{
-        display: 'flex',
+       <div style={{ display: 'flex',
         gap: '1rem',
         marginBottom: '1rem',
         padding: '0.75rem',
-        backgroundColor: '#f9fafb',
+        backgroundColor: 'var(--bg-secondary)',
         borderRadius: '0.5rem',
-        flexWrap: 'wrap'
+        border: '1px solid var(--border-light)',
+        flexWrap: 'wrap',
+        backdropFilter: 'var(--glass-blur)',
+        transition: 'all var(--transition-normal)'
       }}>
         {Object.entries(confidenceColors).map(([level, color]) => (
           <div key={level} style={{
             display: 'flex',
             alignItems: 'center',
             gap: '0.5rem',
-            fontSize: '0.75rem'
+            fontSize: '0.75rem',
+            color: 'var(--text-secondary)',
+            fontWeight: '500'
           }}>
             <div style={{
               width: '12px',
               height: '12px',
               backgroundColor: color,
-              borderRadius: '2px'
+              borderRadius: '2px',
+              boxShadow: 'var(--shadow-sm)',
+              border: '1px solid var(--border-light)'
             }} />
-            <span>{confidenceLabels[level]}</span>
+            <span style={{ color: 'var(--text-primary)' }}>
+              {confidenceLabels[level]}
+            </span>
           </div>
         ))}
       </div>

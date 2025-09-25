@@ -70,45 +70,45 @@ const VerificationResults = ({ verificationResult }) => {
     <div>
       {/* Summary Stats */}
 
-      {/* Field Results Table - WITHOUT Confidence Column */}
+      {/* Field Results Table - Dark Mode Compatible with Centered Headers */}
       <div style={{
-        backgroundColor: '#ffffff',
+        backgroundColor: 'var(--bg-card)',
         borderRadius: '0.75rem',
         overflow: 'hidden',
-        border: '1px solid #e5e7eb',
-        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
+        border: '1px solid var(--border-light)',
+        boxShadow: 'var(--shadow-md)'
       }}>
         <table style={{ 
           width: '100%', 
           borderCollapse: 'collapse',
           fontSize: '0.875rem'
         }}>
-          <thead style={{ backgroundColor: '#f9fafb' }}>
+          <thead style={{ backgroundColor: 'var(--bg-secondary)' }}>
             <tr>
               <th style={{ 
                 padding: '0.75rem 1rem', 
-                textAlign: 'left', 
+                textAlign: 'center', // Centered header
                 fontWeight: '500', 
-                color: '#374151',
-                borderBottom: '1px solid #e5e7eb'
+                color: 'var(--text-primary)',
+                borderBottom: '1px solid var(--border-light)'
               }}>
                 Field
               </th>
               <th style={{ 
                 padding: '0.75rem 1rem', 
-                textAlign: 'left', 
+                textAlign: 'center', // Centered header
                 fontWeight: '500', 
-                color: '#374151',
-                borderBottom: '1px solid #e5e7eb'
+                color: 'var(--text-primary)',
+                borderBottom: '1px solid var(--border-light)'
               }}>
                 Submitted
               </th>
               <th style={{ 
                 padding: '0.75rem 1rem', 
-                textAlign: 'left', 
+                textAlign: 'center', // Centered header
                 fontWeight: '500', 
-                color: '#374151',
-                borderBottom: '1px solid #e5e7eb'
+                color: 'var(--text-primary)',
+                borderBottom: '1px solid var(--border-light)'
               }}>
                 Extracted
               </th>
@@ -116,8 +116,8 @@ const VerificationResults = ({ verificationResult }) => {
                 padding: '0.75rem 1rem', 
                 textAlign: 'center', 
                 fontWeight: '500', 
-                color: '#374151',
-                borderBottom: '1px solid #e5e7eb'
+                color: 'var(--text-primary)',
+                borderBottom: '1px solid var(--border-light)'
               }}>
                 Status
               </th>
@@ -126,24 +126,25 @@ const VerificationResults = ({ verificationResult }) => {
           <tbody>
             {Object.entries(field_results).map(([fieldName, fieldResult], index) => (
               <tr key={fieldName} style={{
-                backgroundColor: index % 2 === 0 ? '#ffffff' : '#f9fafb'
+                backgroundColor: index % 2 === 0 ? 'var(--bg-primary)' : 'var(--bg-secondary)'
               }}>
                 <td style={{ 
                   padding: '1rem', 
                   fontWeight: '500',
-                  color: '#374151',
-                  borderBottom: index === Object.keys(field_results).length - 1 ? 'none' : '1px solid #e5e7eb'
+                  color: 'var(--text-primary)',
+                  borderBottom: index === Object.keys(field_results).length - 1 ? 'none' : '1px solid var(--border-light)'
                 }}>
                   {fieldName.charAt(0).toUpperCase() + fieldName.slice(1)}
                 </td>
                 <td style={{ 
                   padding: '1rem',
-                  color: '#6b7280',
-                  borderBottom: index === Object.keys(field_results).length - 1 ? 'none' : '1px solid #e5e7eb'
+                  color: 'var(--text-secondary)',
+                  borderBottom: index === Object.keys(field_results).length - 1 ? 'none' : '1px solid var(--border-light)'
                 }}>
                   <code style={{
                     padding: '0.25rem 0.5rem',
-                    backgroundColor: '#f3f4f6',
+                    backgroundColor: 'var(--bg-tertiary)',
+                    color: 'var(--text-primary)',
                     borderRadius: '0.25rem',
                     fontSize: '0.75rem'
                   }}>
@@ -152,12 +153,13 @@ const VerificationResults = ({ verificationResult }) => {
                 </td>
                 <td style={{ 
                   padding: '1rem',
-                  color: '#6b7280',
-                  borderBottom: index === Object.keys(field_results).length - 1 ? 'none' : '1px solid #e5e7eb'
+                  color: 'var(--text-secondary)',
+                  borderBottom: index === Object.keys(field_results).length - 1 ? 'none' : '1px solid var(--border-light)'
                 }}>
                   <code style={{
                     padding: '0.25rem 0.5rem',
-                    backgroundColor: '#f3f4f6',
+                    backgroundColor: 'var(--bg-tertiary)',
+                    color: 'var(--text-primary)',
                     borderRadius: '0.25rem',
                     fontSize: '0.75rem'
                   }}>
@@ -167,7 +169,7 @@ const VerificationResults = ({ verificationResult }) => {
                 <td style={{ 
                   padding: '1rem',
                   textAlign: 'center',
-                  borderBottom: index === Object.keys(field_results).length - 1 ? 'none' : '1px solid #e5e7eb'
+                  borderBottom: index === Object.keys(field_results).length - 1 ? 'none' : '1px solid var(--border-light)'
                 }}>
                   <StatusBadge 
                     status={fieldResult.status} 

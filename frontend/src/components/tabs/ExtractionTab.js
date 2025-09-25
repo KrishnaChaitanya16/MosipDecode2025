@@ -58,7 +58,7 @@ const ExtractionTab = ({
         {firstFile && (
           <>
             <div style={styles.templateSelector}>
-              <Globe size={20} style={{ color: '#6b7280' }} />
+              {/* <Globe size={20} style={{ color: '#6b7280' }} /> */}
               <label htmlFor="template-select" style={styles.templateLabel}>
                 Document Language:
               </label>
@@ -74,7 +74,7 @@ const ExtractionTab = ({
                 ))}
               </select>
             </div>
-            
+
             <div style={styles.actionsContainer}>
               <button 
                 onClick={handleSinglePageExtract} 
@@ -95,13 +95,13 @@ const ExtractionTab = ({
             </div>
           </>
         )}
-        
+
         <ErrorDisplay
           error={singlePageError}
           errorDetails={singlePageErrorDetails}
           onDismiss={onDismissSinglePageError}
         />
-         <ErrorDisplay
+        <ErrorDisplay
           error={multipageError}
           errorDetails={multipageErrorDetails}
           onDismiss={onDismissMultipageError}
@@ -111,30 +111,30 @@ const ExtractionTab = ({
       {/* Step 2: View Results */}
       {singlePageData && (
         <div style={styles.resultsGrid}>
-            <ConfidenceOverlay
-              originalImage={firstFile}
-              overlayImage={singlePageData.overlayImage}
-              detections={singlePageData.extractedData ? Object.values(singlePageData.extractedData).length : 0}
-            />
-            <div style={styles.card}>
-              <div style={styles.cardHeader}>
-                <div style={{ ...styles.iconWrapper, ...styles.greenIcon }}>
-                  <Edit3 style={{ color: '#16a34a' }} />
-                </div>
-                <h2 style={styles.cardTitle}>Extracted Form Data</h2>
+          <ConfidenceOverlay
+            originalImage={firstFile}
+            overlayImage={singlePageData.overlayImage}
+            detections={singlePageData.extractedData ? Object.values(singlePageData.extractedData).length : 0}
+          />
+          <div style={styles.card}>
+            <div style={styles.cardHeader}>
+              <div style={{ ...styles.iconWrapper, ...styles.greenIcon }}>
+                <Edit3 style={{ color: '#16a34a' }} />
               </div>
-              <div style={{ ...styles.grid, ...styles.grid2 }}>
-                {activeTemplate.fields.map(field => (
-                  <FormField
-                    key={field.id}
-                    field={field}
-                    value={singlePageData.extractedData ? singlePageData.extractedData[field.id] : ''}
-                    confidence={singlePageData.confidenceData ? singlePageData.confidenceData[field.id] : null}
-                    onChange={onFieldChange}
-                  />
-                ))}
-              </div>
+              <h2 style={styles.cardTitle}>Extracted Form Data</h2>
             </div>
+            <div style={{ ...styles.grid, ...styles.grid2 }}>
+              {activeTemplate.fields.map(field => (
+                <FormField
+                  key={field.id}
+                  field={field}
+                  value={singlePageData.extractedData ? singlePageData.extractedData[field.id] : ''}
+                  confidence={singlePageData.confidenceData ? singlePageData.confidenceData[field.id] : null}
+                  onChange={onFieldChange}
+                />
+              ))}
+            </div>
+          </div>
         </div>
       )}
 

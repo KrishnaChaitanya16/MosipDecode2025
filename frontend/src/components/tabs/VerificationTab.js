@@ -30,27 +30,27 @@ const VerificationTab = ({
   return (
     <div>
       <div style={styles.card}>
-        <div style={styles.cardHeader}>
-          <div style={{ ...styles.iconWrapper, ...styles.purpleIcon }}>
-            <CheckCircle style={{ width: '1.25rem', height: '1.25rem', color: '#7c3aed' }} />
-          </div>
-          <h2 style={styles.cardTitle}>Data Verification Setup</h2>
-        </div>
         
         <div style={{ ...styles.grid, ...styles.grid2, marginBottom: '1.5rem', alignItems: 'flex-start' }}>
           {/* File Upload Section */}
-          <div>
+          <div style={{ 
+            position: 'relative',
+            paddingRight: '1.5rem'
+          }}>
             <h3 style={{ 
               fontSize: '1.125rem', 
               fontWeight: '500', 
-              color: '#374151', 
+              color: 'var(--text-primary)', 
               marginBottom: '1rem',
-              height: '1.75rem', // Fixed height for alignment
+              height: '1.75rem',
               display: 'flex',
-              alignItems: 'center'
+              alignItems: 'center',
+              justifyContent: 'center',
+              textAlign: 'center'
             }}>
               Original Document
             </h3>
+
             <FileUploadArea 
               onFileUpload={(files) => {
                 // Handle single file for verification
@@ -65,21 +65,37 @@ const VerificationTab = ({
               onCameraCapture={onCameraCapture}
               allowMultiple={false}
             />
+
+            {/* Vertical separator line */}
+            <div style={{
+              position: 'absolute',
+              top: 0,
+              right: 0,
+              width: '2px',
+              height: '150%',
+              backgroundColor: 'var(--border-light)',
+              opacity: 0.9
+            }} />
           </div>
 
           {/* Data Entry Section */}
-          <div>
+          <div style={{ 
+            paddingLeft: '1.5rem' 
+          }}>
             <h3 style={{ 
               fontSize: '1.125rem', 
               fontWeight: '500', 
-              color: '#374151', 
+              color: 'var(--text-primary)', 
               marginBottom: '1rem',
-              height: '1.75rem', // Fixed height for alignment
+              height: '1.75rem',
               display: 'flex',
-              alignItems: 'center'
+              alignItems: 'center',
+              justifyContent: 'center',
+              textAlign: 'center'
             }}>
               Enter Verification Data
             </h3>
+
             <DataEntryForm
               verificationData={verificationData}
               onFieldChange={onVerificationFieldChange}
@@ -89,6 +105,7 @@ const VerificationTab = ({
             />
           </div>
         </div>
+
 
         {/* Verification Error Display */}
         {verificationError && (
@@ -116,7 +133,7 @@ const VerificationTab = ({
             disabled={!canStartVerification || isVerifying}
             style={{ 
               ...styles.button, 
-              ...styles.purpleButton, 
+              ...styles.primaryButton, 
               padding: '0.75rem 1.5rem',
               opacity: (!canStartVerification || isVerifying) ? 0.6 : 1
             }}
@@ -164,9 +181,6 @@ const VerificationTab = ({
       }}>
         <div style={styles.card}>
           <div style={styles.cardHeader}>
-            <div style={{ ...styles.iconWrapper, ...styles.orangeIcon }}>
-              <AlertCircle style={{ width: '1.25rem', height: '1.25rem', color: '#ea580c' }} />
-            </div>
             <h2 style={styles.cardTitle}>Verification Results</h2>
           </div>
 

@@ -29,7 +29,7 @@ export const useOCRExtraction = (selectedTemplate) => {
         return;
       }
 
-      const mapped = data && data.mapped_fields ? data.mapped_fields : {};
+      const mapped = data && data.mapped_fields.mapped_fields ? data.mapped_fields.mapped_fields : {};
       const unwrapped = {};
       const confidence = {};
       

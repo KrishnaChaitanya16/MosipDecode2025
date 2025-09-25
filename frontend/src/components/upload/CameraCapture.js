@@ -15,7 +15,7 @@ const CameraCapture = ({
     <div style={{
       marginTop: '1rem',
       padding: '1rem',
-      backgroundColor: '#f9fafb',
+      /* backgroundColor: '#f9fafb', */
       borderRadius: '0.75rem',
       border: '1px solid #e5e7eb'
     }}>

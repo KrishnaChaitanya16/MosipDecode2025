@@ -28,7 +28,7 @@ export const useOCRDetection = () => {
         return;
       }
       
-      const mapped = result.mapped_fields || {};
+      const mapped = result.mapped_fields.mapped_fields || {};
       const unwrapped = {};
       const confidence = {};
       
