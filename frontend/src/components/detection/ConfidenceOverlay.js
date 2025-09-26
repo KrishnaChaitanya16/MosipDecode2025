@@ -114,10 +114,10 @@ const ConfidenceOverlay = ({
        <div style={{ display: 'flex',
         gap: '1rem',
         marginBottom: '1rem',
-        padding: '0.75rem',
-        backgroundColor: 'var(--bg-secondary)',
-        borderRadius: '0.5rem',
-        border: '1px solid var(--border-light)',
+        padding: '0.75rem',/* 
+        backgroundColor: 'var(--bg-secondary)', */
+        borderRadius: '0.5rem',/* 
+        border: '1px solid var(--border-light)', */
         flexWrap: 'wrap',
         backdropFilter: 'var(--glass-blur)',
         transition: 'all var(--transition-normal)'

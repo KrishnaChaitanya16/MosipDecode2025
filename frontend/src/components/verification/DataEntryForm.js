@@ -3,6 +3,57 @@ import { styles } from '../../constants/styles';
 import FormField from '../common/FormField';
 import { englishFields } from '../../constants/fields';
 
+// --- Move HorizontalFormField outside of the main component ---
+// By defining it here, it's created only once.
+const HorizontalFormField = ({ field, value, onChange }) => (
+  <div style={{
+    display: 'flex',
+    alignItems: 'center',
+    gap: 'var(--space-md)',
+    marginBottom: 'var(--space-sm)',
+    padding: 'var(--space-sm)',
+    borderRadius: 'var(--radius-sm)',
+  }}>
+    <label style={{
+      fontSize: '0.9rem',
+      fontWeight: '500',
+      color: 'var(--text-primary)',
+      minWidth: '80px',
+      textAlign: 'left',
+      marginBottom: 0
+    }}>
+      {field.label}:
+    </label>
+    <input
+      type="text"
+      value={value}
+      onChange={(e) => onChange(field.id, e.target.value)}
+      placeholder={`Enter ${field.label.toLowerCase()}`}
+      style={{
+        flex: 1,
+        padding: 'var(--space-sm)',
+        border: '1px solid var(--border-medium)',
+        borderRadius: 'var(--radius-sm)',
+        background: 'var(--bg-primary)',
+        color: 'var(--text-primary)',
+        fontSize: '0.9rem',
+        fontFamily: 'var(--font-family)',
+        transition: 'all var(--transition-fast)',
+        boxSizing: 'border-box'
+      }}
+      onFocus={(e) => {
+        e.target.style.borderColor = 'var(--primary)';
+        e.target.style.boxShadow = '0 0 0 3px rgba(37, 99, 235, 0.1)';
+      }}
+      onBlur={(e) => {
+        e.target.style.borderColor = 'var(--border-medium)';
+        e.target.style.boxShadow = 'none';
+      }}
+    />
+  </div>
+);
+
+
 const DataEntryForm = ({ 
   verificationData, 
   onFieldChange, 
@@ -44,55 +95,6 @@ const DataEntryForm = ({
       onFieldChange(key, val);
     });
   };
-
-  // Custom horizontal form field component for side-by-side layout
-  const HorizontalFormField = ({ field, value, onChange }) => (
-    <div style={{
-      display: 'flex',
-      alignItems: 'center',
-      gap: 'var(--space-md)',
-      marginBottom: 'var(--space-sm)',
-      padding: 'var(--space-sm)',
-      borderRadius: 'var(--radius-sm)',
-    }}>
-      <label style={{
-        fontSize: '0.9rem',
-        fontWeight: '500',
-        color: 'var(--text-primary)',
-        minWidth: '80px',
-        textAlign: 'left',
-        marginBottom: 0
-      }}>
-        {field.label}:
-      </label>
-      <input
-        type="text"
-        value={value}
-        onChange={(e) => onChange(field.id, e.target.value)}
-        placeholder={`Enter ${field.label.toLowerCase()}`}
-        style={{
-          flex: 1,
-          padding: 'var(--space-sm)',
-          border: '1px solid var(--border-medium)',
-          borderRadius: 'var(--radius-sm)',
-          background: 'var(--bg-primary)',
-          color: 'var(--text-primary)',
-          fontSize: '0.9rem',
-          fontFamily: 'var(--font-family)',
-          transition: 'all var(--transition-fast)',
-          boxSizing: 'border-box'
-        }}
-        onFocus={(e) => {
-          e.target.style.borderColor = 'var(--primary)';
-          e.target.style.boxShadow = '0 0 0 3px rgba(37, 99, 235, 0.1)';
-        }}
-        onBlur={(e) => {
-          e.target.style.borderColor = 'var(--border-medium)';
-          e.target.style.boxShadow = 'none';
-        }}
-      />
-    </div>
-  );
 
   return (
     <div>

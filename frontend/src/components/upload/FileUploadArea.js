@@ -1,10 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Upload, Camera, X, FileText, Image } from 'lucide-react';
 import { styles } from '../../constants/styles';
 import CameraCapture from './CameraCapture';
 import { useCamera } from '../../hooks/useCamera';
 
-const FileUploadArea = ({ onFileUpload, uploadedFiles = [], onCameraCapture, onRemoveFile, allowMultiple = false }) => {
+const FileUploadArea = ({ onFileUpload, uploadedFiles = [], onCameraCapture, onRemoveFile, allowMultiple }) => {
   const { 
     isCameraActive, 
     videoRef, 
@@ -13,6 +13,8 @@ const FileUploadArea = ({ onFileUpload, uploadedFiles = [], onCameraCapture, onR
     captureImage, 
     stopCamera 
   } = useCamera();
+
+  const [isDragActive, setIsDragActive] = useState(false);
 
   const handleCapture = async () => {
     const file = await captureImage();
@@ -47,6 +49,55 @@ const FileUploadArea = ({ onFileUpload, uploadedFiles = [], onCameraCapture, onR
     event.target.value = '';
   };
 
+  // Drag and drop handlers
+  const handleDragEnter = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragActive(true);
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    // Only set inactive if we're leaving the main container
+    if (!e.currentTarget.contains(e.relatedTarget)) {
+      setIsDragActive(false);
+    }
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragActive(false);
+    
+    const files = Array.from(e.dataTransfer.files);
+    console.log('📁 Dropped files:', files);
+    
+    // Filter for allowed file types
+    const allowedTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
+    const validFiles = files.filter(file => {
+      const isValid = allowedTypes.includes(file.type) || 
+                     file.name.toLowerCase().match(/\.(pdf|jpg|jpeg|png)$/);
+      if (!isValid) {
+        console.warn(`❌ Invalid file type: ${file.name}`);
+      }
+      return isValid;
+    });
+    
+    if (validFiles.length > 0) {
+      if (allowMultiple) {
+        onFileUpload(validFiles);
+      } else {
+        onFileUpload([validFiles[0]]); // Single file mode
+      }
+    }
+  };
+
   const formatFileSize = (bytes) => {
     return (bytes / 1024 / 1024).toFixed(2);
   };
@@ -64,7 +115,23 @@ const FileUploadArea = ({ onFileUpload, uploadedFiles = [], onCameraCapture, onR
 
   return (
     <div style={styles.fileUploadContainer}>
-      <div style={styles.uploadArea}>
+      <div 
+        style={{
+          ...styles.uploadArea,
+          border: isDragActive 
+            ? '2px dashed var(--primary)' 
+            : styles.uploadArea.border,
+          backgroundColor: isDragActive 
+            ? 'var(--primary-light)' 
+            : styles.uploadArea.backgroundColor,
+          transform: isDragActive ? 'scale(1.02)' : 'scale(1)',
+          transition: 'all 0.2s ease-in-out'
+        }}
+        onDragEnter={handleDragEnter}
+        onDragLeave={handleDragLeave}
+        onDragOver={handleDragOver}
+        onDrop={handleDrop}
+      >
         <div style={styles.uploadContent}>
           <div style={styles.uploadIconWrapper}>
             <Upload size={32} />
@@ -133,7 +200,7 @@ const FileUploadArea = ({ onFileUpload, uploadedFiles = [], onCameraCapture, onR
                       </div>
                     </div>
                     
-                    {allowMultiple && onRemoveFile && (
+                    {onRemoveFile && (
                       <button
                         onClick={() => onRemoveFile(index)}
                         style={styles.removeFileBtn}
@@ -151,16 +218,6 @@ const FileUploadArea = ({ onFileUpload, uploadedFiles = [], onCameraCapture, onR
                   </div>
                 ))}
               </div>
-              
-              {allowMultiple && filesArray.length > 1 && (
-                <div style={styles.filesSummary}>
-                  Total: {filesArray.length} file{filesArray.length !== 1 ? 's' : ''} 
-                  ({filesArray.reduce((total, file) => total + file.size, 0) / 1024 / 1024 < 1 
-                    ? `${(filesArray.reduce((total, file) => total + file.size, 0) / 1024).toFixed(0)} KB`
-                    : `${(filesArray.reduce((total, file) => total + file.size, 0) / 1024 / 1024).toFixed(2)} MB`
-                  })
-                </div>
-              )}
             </div>
           )}
         </div>

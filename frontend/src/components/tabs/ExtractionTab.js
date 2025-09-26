@@ -25,13 +25,13 @@ const ExtractionTab = ({
   const activeTemplate = templates[selectedTemplate];
 
   const handleSinglePageExtract = () => {
-    if (firstFile) {
+    if (uploadedFiles.length > 0) {
       onExtractSinglePage(firstFile, activeTemplate.langCode);
     }
   };
 
   const handleMultipageExtract = () => {
-    if (firstFile) {
+    if (uploadedFiles.length > 0) {
       onExtractMultipage(firstFile, activeTemplate.langCode);
     }
   };
@@ -52,7 +52,7 @@ const ExtractionTab = ({
           uploadedFiles={uploadedFiles}
           onCameraCapture={onCameraCapture}
           onRemoveFile={onRemoveFile}
-          allowMultiple={false} // Simplified to single file upload for clarity
+          allowMultiple={true} // Simplified to single file upload for clarity
         />
 
         {firstFile && (
