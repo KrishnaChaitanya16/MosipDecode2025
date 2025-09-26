@@ -106,6 +106,8 @@ git clone https://github.com/KrishnaChaitanya16/MosipDecode2025.git
 
 
   - Now replace the ```NGROK_API_URL``` in the ```backend/extraction.py``` with copied public URL as show in below
+    <img width="1081" height="239" alt="Ngrok" src="https://github.com/user-attachments/assets/019d88ec-611f-4cdd-a31b-2c4f9108d9ef" />
+
   - Once the colab server starts running , proceed to backend server setup.
 
   
