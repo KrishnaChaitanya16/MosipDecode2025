@@ -58,7 +58,9 @@ The traditional process in not only slow but also introduces high risk of data e
 ## Tech Stack
  - ### Backend :
     - OCR Model - PHOCR(PaddleOCR)
+    - LLM for Intelligent Mapping - numind/NuExtract-1.5
     - Server Logic - Python , FAST API
+    - LLM server - Google Colab
  - ### Frontend:
    - HTML /CSS
    - React.js
