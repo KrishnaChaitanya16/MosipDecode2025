@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FileText, CheckCircle, Home, Menu, X, Sun, Moon, Zap, Shield, Target, Layers, Globe, Camera, Upload, Edit3, AlertCircle, RefreshCw } from 'lucide-react';
+import { Square, AlertTriangle, FileText, CheckCircle, Home, Menu, X, Sun, Moon, Zap, Shield, Target, Layers, Globe, Camera, Upload, Edit3, AlertCircle, RefreshCw } from 'lucide-react';
 import { useFileUpload } from './hooks/useFileUpload';
 import { useOCRDetection } from './hooks/useOCRDetection';
 import { useMultipagePdf } from './hooks/useMultipagePdf';
@@ -61,6 +61,7 @@ const injectStyles = () => {
       --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
       --sidebar-width: 240px;
       --sidebar-width-collapsed: 60px;
+      --header-height: 80px; /* Added consistent header height */
       
       --transition-fast: 0.15s cubic-bezier(0.4, 0, 0.2, 1);
       --transition-normal: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -185,11 +186,13 @@ const injectStyles = () => {
     }
 
     .sidebar-header {
-      padding: var(--space-lg);
+      height: var(--header-height);
+      padding: 0 var(--space-lg);
       border-bottom: 1px solid var(--border-light);
       display: flex;
       align-items: center;
       justify-content: center;
+      flex-shrink: 0; /* Prevent shrinking */
     }
 
     .logo {
@@ -218,7 +221,7 @@ const injectStyles = () => {
     }
 
     .sidebar-nav {
-      padding: var(--space-lg) 0;
+      padding: var(--space-lg) 0.5rem;
       display: flex;
       flex-direction: column;
       gap: var(--space-xs);
@@ -228,8 +231,8 @@ const injectStyles = () => {
       display: flex;
       align-items: center;
       gap: var(--space-sm);
-      padding: var(--space-sm) var(--space-lg);
-      margin: 0 var(--space-sm);
+      padding: var(--space-sm) var(--space-sm);
+      margin: var(--space-sm) 0;
       border: none;
       background: transparent;
       color: var(--text-secondary);
@@ -263,6 +266,9 @@ const injectStyles = () => {
       width: 20px;
       height: 20px;
       flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
     .nav-label {
@@ -289,16 +295,18 @@ const injectStyles = () => {
     }
 
     .main-header {
+      height: var(--header-height);
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: var(--space-lg) var(--space-xl);
+      padding: 0 var(--space-xl);
       background: var(--bg-card);
       backdrop-filter: var(--glass-blur);
       border-bottom: 1px solid var(--border-light);
       position: sticky;
       top: 0;
       z-index: 50;
+      flex-shrink: 0; /* Prevent shrinking */
     }
 
     .header-left {
@@ -372,22 +380,26 @@ const injectStyles = () => {
     }
 
     .hero-section {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: var(--space-2xl);
+      position: relative;
+      display: flex;
       align-items: center;
-      min-height: 70vh;
+      justify-content: center;
+      min-height: 50vh;
       padding: var(--space-2xl) 0;
+      overflow: hidden;
     }
 
     .hero-content {
+      position: relative;
+      z-index: 10;
+      text-align: center;
       display: flex;
       flex-direction: column;
       gap: var(--space-xl);
     }
 
     .hero-title {
-      font-size: clamp(2.5rem, 5vw, 4rem);
+      font-size: clamp(3rem, 6vw, 5rem);
       font-weight: 800;
       line-height: 1.1;
       color: var(--text-primary);
@@ -431,46 +443,61 @@ const injectStyles = () => {
     }
 
     .hero-visual {
-      position: relative;
-      height: 400px;
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
       display: flex;
       align-items: center;
       justify-content: center;
+      z-index: 1;
+      pointer-events: none;
     }
 
     .floating-card {
       position: absolute;
       padding: var(--space-lg);
-      background: var(--bg-card);
-      border: 1px solid var(--border-light);
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
       border-radius: var(--radius-lg);
-      box-shadow: var(--shadow-lg);
-      backdrop-filter: var(--glass-blur);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+      backdrop-filter: blur(5px);
       display: flex;
       flex-direction: column;
       align-items: center;
       gap: var(--space-sm);
       color: var(--text-primary);
       font-weight: 500;
+      opacity: 0.25;
+      transition: all 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+      backface-visibility: hidden;
+      perspective: 1000px;
+    }
+
+    [data-theme="dark"] .floating-card {
+      background: rgba(0, 0, 0, 0.2);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
     }
 
     .card-1 {
-      top: 10%;
+      bottom: 25%;
       left: 20%;
-      animation: float 6s ease-in-out infinite;
+      animation: cardFlipCycle 10s infinite;
     }
 
     .card-2 {
-      top: 60%;
-      right: 10%;
-      animation: float 8s ease-in-out infinite reverse;
+      bottom: 30%;
+      right: 20%;
+      animation: cardFlipCycle 10s infinite;
     }
 
     .card-3 {
       bottom: 20%;
       left: 50%;
       transform: translateX(-50%);
-      animation: float 7s ease-in-out infinite;
+      animation: cardFlipCycleTranslate 10s infinite;
     }
 
     .features-section {
@@ -600,7 +627,7 @@ const injectStyles = () => {
     }
 
     .feature-card li::before {
-      content: 'âœ“';
+      content: '✓';
       position: absolute;
       left: 0;
       color: var(--success);
@@ -668,12 +695,49 @@ const injectStyles = () => {
       line-height: 1.6;
     }
 
-    @keyframes float {
-      0%, 100% {
-        transform: translateY(0px);
+    @keyframes cardFlipCycle {
+      0%, 40% {
+        transform: rotateY(0deg);
+        opacity: 0.25;
       }
-      50% {
-        transform: translateY(-10px);
+      45% {
+        transform: rotateY(90deg);
+        opacity: 0.1;
+      }
+      50%, 90% {
+        transform: rotateY(90deg);
+        opacity: 0.05;
+      }
+      95% {
+        transform: rotateY(90deg);
+        opacity: 0.1;
+      }
+      100% {
+        transform: rotateY(0deg);
+        opacity: 0.25;
+      }
+    }
+
+    @keyframes cardFlipCycleTranslate {
+      0%, 40% {
+        transform: translateX(-50%) rotateY(0deg);
+        opacity: 0.25;
+      }
+      45% {
+        transform: translateX(-50%) rotateY(90deg);
+        opacity: 0.1;
+      }
+      50%, 90% {
+        transform: translateX(-50%) rotateY(90deg);
+        opacity: 0.05;
+      }
+      95% {
+        transform: translateX(-50%) rotateY(90deg);
+        opacity: 0.1;
+      }
+      100% {
+        transform: translateX(-50%) rotateY(0deg);
+        opacity: 0.25;
       }
     }
 
@@ -730,8 +794,30 @@ const injectStyles = () => {
       }
       
       .hero-section {
-        grid-template-columns: 1fr;
-        text-align: center;
+        padding: var(--space-xl) var(--space-md);
+      }
+
+      .hero-title {
+        font-size: clamp(2rem, 8vw, 3rem);
+      }
+
+      .floating-card {
+        padding: var(--space-md);
+        font-size: 0.8rem;
+      }
+
+      .card-1 {
+        bottom: 15%;
+        left: 10%;
+      }
+
+      .card-2 {
+        bottom: 20%;
+        right: 10%;
+      }
+
+      .card-3 {
+        bottom: 10%;
       }
       
       .hero-stats {
@@ -765,38 +851,9 @@ const HomePage = ({ darkMode }) => (
           Intelligent Document
           <span className="gradient-text"> Processing</span>
         </h1>
-        <p className="hero-subtitle">
-          Advanced OCR technology with multilingual support, confidence zones, and intelligent verification.
-          Transform any document into structured, actionable data.
-        </p>
-        <div className="hero-stats">
-          <div className="stat-item">
-            <div className="stat-number">50+</div>
-            <div className="stat-label">Languages</div>
-          </div>
-          <div className="stat-item">
-            <div className="stat-number">99%</div>
-            <div className="stat-label">Accuracy</div>
-          </div>
-          <div className="stat-item">
-            <div className="stat-number">10x</div>
-            <div className="stat-label">Faster</div>
-          </div>
-        </div>
-      </div>
-      <div className="hero-visual animate-float">
-        <div className="floating-card card-1">
-          <FileText size={24} />
-          <span>PDF Processing</span>
-        </div>
-        <div className="floating-card card-2">
-          <Globe size={24} />
-          <span>Multi-language</span>
-        </div>
-        <div className="floating-card card-3">
-          <Shield size={24} />
-          <span>Verification</span>
-        </div>
+        <h3>
+          AI-powered OCR platform that transforms documents into actionable data.
+        </h3>
       </div>
     </div>
 
@@ -859,8 +916,35 @@ const HomePage = ({ darkMode }) => (
             <li>Bulk data export</li>
           </ul>
         </div>
+
+        <div className="feature-card animate-slide-up" style={{ animationDelay: '0.5s' }}>
+          <div className="feature-icon extraction">
+            <Square size={32} />
+          </div>
+          <h3>Bounding Box Analysis</h3>
+          <p>Visual confidence mapping with precise text boundaries and detailed accuracy metrics for each detected element.</p>
+          <ul>
+            <li>Visual text boundary detection</li>
+            <li>Per-element confidence scoring</li>
+            <li>Interactive region highlighting</li>
+          </ul>
+        </div>
+
+        <div className="feature-card animate-slide-up" style={{ animationDelay: '0.6s' }}>
+          <div className="feature-icon verification">
+            <AlertTriangle size={32} />
+          </div>
+          <h3>Quality Assessment</h3>
+          <p>Advanced image quality analysis that identifies poor document conditions and provides actionable improvement suggestions.</p>
+          <ul>
+            <li>Blur and noise detection</li>
+            <li>Resolution quality analysis</li>
+            <li>Lighting condition assessment</li>
+          </ul>
+        </div>
       </div>
     </div>
+
 
     {/* How It Works Section */}
     <div className="how-it-works-section">
@@ -983,7 +1067,7 @@ const OCRProjectUI = () => {
     switch(activeTab) {
       case 'extraction': return 'Text Extraction';
       case 'verification': return 'Data Verification';
-      default: return 'OCR Pro Dashboard';
+      default: return 'Dashboard';
     }
   };
 
