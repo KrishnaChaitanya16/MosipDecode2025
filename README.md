@@ -126,6 +126,7 @@ git clone https://github.com/KrishnaChaitanya16/MosipDecode2025.git
     <img width="1081" height="239" alt="Ngrok" src="https://github.com/user-attachments/assets/019d88ec-611f-4cdd-a31b-2c4f9108d9ef" />
 
   - Once the colab server starts running , proceed to backend server setup.
+> Note : If the collab seesion ends or expires or runs out of resources , please make sure to run the notebook in an new session.
 
   
 2. Move to the backend folder:
