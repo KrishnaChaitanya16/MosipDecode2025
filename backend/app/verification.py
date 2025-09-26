@@ -26,7 +26,7 @@ def verify_fields(submitted_data: dict, file_path: str) -> dict:
     """
     # Run OCR and extract structured fields
     ocr_result = extract_text(file_path)
-    mapped_fields = map_fields(ocr_result)
+    mapped_fields = map_fields(ocr_result)['mapped_fields']
     
     # Extract values from the new format: {"field": {"value": str, "confidence": float}}
     extracted_fields = {}
