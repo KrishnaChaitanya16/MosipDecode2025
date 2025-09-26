@@ -37,7 +37,16 @@ The traditional process in not only slow but also introduces high risk of data e
 - It cross verifies the data entered in the digital form with the data from the  original scanned document field by field . Any mismatches will be flagged , and each field will be assigned a **confidence score** providing reliable measure for data accuracy.
 3. **Image Quality analysis**: 
 - **Automatic Scan Analysis**: The system first checks every document for common quality issues.
-- **Detects Key Problems**: It specifically identifies problems like blurriness and poor lighting that hurt OCR accuracy.It provides an instant quality score, prompting the user for a better scan if the quality is too low
+- **Detects Key Problems**: Every uploaded image is scored 0–100 before OCR to ensure accurate text extraction.
+  The pipeline combines several computer-vision tests implemented with OpenCV, NumPy, and SciPy:
+
+    - **Resolution** : Flags image smaller than 500px
+    -  **Blur** : combines several detectors (edges, gradients, frequency content, text-region sharpness) into one overall blur score.
+    - **Contrast** : measures global and local contrast to spot poor lighting.
+    - **Text Clarity** : verifies clear character boundaries and line separation.
+    - **Skew** : detects the page tilt and flags the error.
+  Starting from 100, points are deducted for each issue and clear suggestions are returned.
+
 
 
 4. **Multi-Page Document support**:
@@ -67,7 +76,15 @@ The traditional process in not only slow but also introduces high risk of data e
 2. **Selecting the Optimal OCR Model**:
  -**The Challenge**: Our initial choice, TrOCR, performed well with Latin scripts but struggled with accuracy on our specific test data, especially with non-Latin languages.
 
--**The Solution**: After comparative testing, we switched to the PHOCR model. It demonstrated superior overall accuracy and, crucially, performed exceptionally well with complex character sets like Chinese and Japanese, where TrOCR had failed. This decision was key to achieving the project's multi-lingual requirements.
+-**The Solution**:We created a benchmark set of 50 images of varying quality (different resolutions, lighting conditions, and languages) and measured the accuracy of both TrOCR and PHOCR.
+The results are shown in the graph below.
+<img width="1641" height="983" alt="PhOCR vs TrOCR" src="https://github.com/user-attachments/assets/fba90ffa-7cab-4da0-a413-b2d510db2dcd" />
+
+
+
+- **Test Results** : Both performed equally well for high quality images , but when it came to low quality and languages other than english PHOCR performed better than TrOCR.
+
+ After comparative testing, we switched to the PHOCR model. It demonstrated superior overall accuracy and, crucially, performed exceptionally well with complex character sets like Chinese and Japanese, where TrOCR had failed. This decision was key to achieving the project's multi-lingual requirements.
 
 ## Getting Started 
  - ### Prerequisites:
@@ -155,4 +172,3 @@ npm start
 
  
    
-
