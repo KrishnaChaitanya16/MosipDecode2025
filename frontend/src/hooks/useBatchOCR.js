@@ -50,7 +50,7 @@ export const useBatchOCR = (selectedTemplate) => {
           const processedPages = {};
           Object.keys(data.pages).forEach(pageNum => {
             const pageData = data.pages[pageNum];
-            const mapped = pageData?.mapped_fields.mapped_fields || {};
+            const mapped = pageData?.mapped_fields || {};
             
             const unwrapped = {};
             const confidence = {};
@@ -87,7 +87,7 @@ export const useBatchOCR = (selectedTemplate) => {
           };
         } else {
           // Single page processing
-          const mapped = data.mapped_fields.mapped_fields || {};
+          const mapped = data.mapped_fields || {};
           const unwrapped = {};
           const confidence = {};
           

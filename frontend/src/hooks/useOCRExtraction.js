@@ -29,14 +29,27 @@ export const useOCRExtraction = (selectedTemplate) => {
         return;
       }
 
-      const mapped = data && data.mapped_fields.mapped_fields ? data.mapped_fields.mapped_fields : {};
+      // Handle new format where mapped_fields contains direct values
+      const mapped = data.mapped_fields || {};
       const unwrapped = {};
       const confidence = {};
       
+      // Since mapped_fields now contains direct values, use them as is
       Object.keys(mapped).forEach((key) => {
-        unwrapped[key] = mapped[key]?.value || null;
-        confidence[key] = mapped[key]?.confidence || null;
+        unwrapped[key] = mapped[key]; // Direct value, no .value property
       });
+
+      // Extract confidence data from detections array if available
+      if (Array.isArray(data.detections)) {
+        data.detections.forEach((detection) => {
+          // Try to match detection text with field values to assign confidence
+          Object.keys(unwrapped).forEach((fieldKey) => {
+            if (unwrapped[fieldKey] === detection.text) {
+              confidence[fieldKey] = detection.confidence;
+            }
+          });
+        });
+      }
 
       const hasData = Object.values(unwrapped).some(value => 
         value !== null && value !== '' && value !== undefined
@@ -97,6 +110,6 @@ export const useOCRExtraction = (selectedTemplate) => {
     clearExtraction,
     handleDismissError,
     setExtractedData,
-    setConfidenceData // Add this line
+    setConfidenceData
   };
 };

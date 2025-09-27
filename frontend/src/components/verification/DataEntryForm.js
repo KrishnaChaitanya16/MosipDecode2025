@@ -25,10 +25,10 @@ const HorizontalFormField = ({ field, value, onChange }) => (
       {field.label}:
     </label>
     <input
-      type="text"
+      type={field.type || 'text'}
       value={value}
       onChange={(e) => onChange(field.id, e.target.value)}
-      placeholder={`Enter ${field.label.toLowerCase()}`}
+      placeholder={field.placeholder || `Enter ${field.label.toLowerCase()}`}
       style={{
         flex: 1,
         padding: 'var(--space-sm)',
@@ -53,21 +53,26 @@ const HorizontalFormField = ({ field, value, onChange }) => (
   </div>
 );
 
-
 const DataEntryForm = ({ 
   verificationData, 
   onFieldChange, 
   onClear, 
   onUseExtracted, 
-  extractedData 
+  extractedData,
+  customFields = null  // NEW: Accept custom fields
 }) => {
   const [jsonInput, setJsonInput] = useState('');
   const [jsonError, setJsonError] = useState('');
 
+  // Determine which fields to use: custom fields if provided, otherwise default English fields
+  const fieldsToRender = customFields && customFields.length > 0 
+    ? customFields 
+    : englishFields.slice(0, 8);
+
   const handleJsonInputChange = (value) => {
     setJsonInput(value);
     setJsonError('');
-    
+
     if (!value.trim()) {
       return;
     }
@@ -84,39 +89,170 @@ const DataEntryForm = ({
   };
 
   const populateWithSampleData = () => {
-    const sampleData = {
-      "name": "John Smith",
-      "age": "30",
-      "gender": "Male",
-      "address": "123 Elm Street"
-    };
+    // Generate sample data based on current fields
+    const sampleData = {};
+    fieldsToRender.slice(0, 4).forEach((field, index) => {
+      switch (field.type) {
+        case 'number':
+          sampleData[field.id] = index === 0 ? '30' : '25';
+          break;
+        case 'email':
+          sampleData[field.id] = 'john.smith@example.com';
+          break;
+        case 'tel':
+          sampleData[field.id] = '+1-555-0123';
+          break;
+        default:
+          if (field.id.toLowerCase().includes('name')) {
+            sampleData[field.id] = 'John Smith';
+          } else if (field.id.toLowerCase().includes('address')) {
+            sampleData[field.id] = '123 Elm Street';
+          } else if (field.id.toLowerCase().includes('gender')) {
+            sampleData[field.id] = 'Male';
+          } else {
+            sampleData[field.id] = `Sample ${field.label}`;
+          }
+      }
+    });
+
     setJsonInput(JSON.stringify(sampleData, null, 2));
     Object.entries(sampleData).forEach(([key, val]) => {
       onFieldChange(key, val);
     });
   };
 
+  const clearCurrentFields = () => {
+    // Clear only the fields that are currently being displayed
+    fieldsToRender.forEach(field => {
+      onFieldChange(field.id, '');
+    });
+    setJsonInput('');
+    setJsonError('');
+  };
+
   return (
     <div>
       <div style={{ marginBottom: '1.5rem' }}>
-        
-        {/* Method 2: Individual Form Fields with Horizontal Layout */}
+
+        {/* Dynamic Field Count Display */}
+        {customFields && (
+          <div style={{
+            marginBottom: '1rem',
+            padding: '0.75rem',
+            backgroundColor: 'var(--bg-tertiary)',
+            borderRadius: 'var(--radius-sm)',
+            border: '1px solid var(--border-light)'
+          }}>
+            <p style={{
+              margin: 0,
+              fontSize: '0.875rem',
+              color: 'var(--text-secondary)',
+              fontWeight: '500'
+            }}>
+              <strong>Verification Form Fields ({fieldsToRender.length}):</strong>{' '}
+              <span style={{ color: 'var(--text-tertiary)', fontWeight: '400' }}>
+                {fieldsToRender.map(f => f.label).join(', ')}
+              </span>
+            </p>
+          </div>
+        )}
+
+        {/* Dynamic Form Fields with Horizontal Layout */}
         <div style={{ marginBottom: '1.5rem' }}>
           <div style={{ 
             display: 'flex', 
             flexDirection: 'column', 
             gap: 'var(--space-xs)' 
           }}>
-            {englishFields.slice(0, 8).map(field => (
-              <HorizontalFormField
-                key={field.id}
-                field={field}
-                value={verificationData[field.id] || ''}
-                onChange={onFieldChange}
-              />
-            ))}
+            {fieldsToRender.length > 0 ? (
+              fieldsToRender.map(field => (
+                <HorizontalFormField
+                  key={field.id}
+                  field={field}
+                  value={verificationData[field.id] || ''}
+                  onChange={onFieldChange}
+                />
+              ))
+            ) : (
+              <div style={{
+                textAlign: 'center',
+                padding: '2rem',
+                color: 'var(--text-tertiary)',
+                fontStyle: 'italic',
+                border: '2px dashed var(--border-light)',
+                borderRadius: 'var(--radius-md)'
+              }}>
+                No fields configured for verification. Please add fields in the Field Configuration section above.
+              </div>
+            )}
           </div>
         </div>
+
+        {/* JSON Input Section (Optional) */}
+        {fieldsToRender.length > 0 && (
+          <details style={{ marginBottom: '1rem' }}>
+            <summary style={{
+              cursor: 'pointer',
+              fontSize: '0.9rem',
+              fontWeight: '500',
+              color: 'var(--text-primary)',
+              padding: '0.5rem',
+              backgroundColor: 'var(--bg-secondary)',
+              borderRadius: 'var(--radius-sm)',
+              border: '1px solid var(--border-light)'
+            }}>
+              📋 JSON Bulk Input (Advanced)
+            </summary>
+            <div style={{ 
+              marginTop: '1rem',
+              padding: '1rem',
+              backgroundColor: 'var(--bg-secondary)',
+              borderRadius: 'var(--radius-sm)',
+              border: '1px solid var(--border-light)'
+            }}>
+              <textarea
+                value={jsonInput}
+                onChange={(e) => handleJsonInputChange(e.target.value)}
+                placeholder={`{\n  "${fieldsToRender[0]?.id || 'field_name'}": "value",\n  "${fieldsToRender[1]?.id || 'another_field'}": "value"\n}`}
+                style={{
+                  width: '100%',
+                  minHeight: '100px',
+                  padding: 'var(--space-sm)',
+                  border: '1px solid var(--border-medium)',
+                  borderRadius: 'var(--radius-sm)',
+                  background: 'var(--bg-primary)',
+                  color: 'var(--text-primary)',
+                  fontSize: '0.875rem',
+                  fontFamily: 'monospace',
+                  resize: 'vertical',
+                  boxSizing: 'border-box'
+                }}
+              />
+              {jsonError && (
+                <p style={{ 
+                  color: 'var(--error)', 
+                  fontSize: '0.875rem', 
+                  marginTop: '0.5rem',
+                  marginBottom: 0 
+                }}>
+                  {jsonError}
+                </p>
+              )}
+              <button
+                onClick={populateWithSampleData}
+                style={{
+                  ...styles.button,
+                  ...styles.secondaryButton,
+                  fontSize: '0.875rem',
+                  padding: '0.5rem 1rem',
+                  marginTop: '0.5rem'
+                }}
+              >
+                📝 Fill Sample Data
+              </button>
+            </div>
+          </details>
+        )}
 
         {/* Action Buttons */}
         <div style={{ 
@@ -125,15 +261,48 @@ const DataEntryForm = ({
           flexWrap: 'wrap',
           alignItems: 'center',
           paddingTop: 'var(--space-lg)',
-          /* borderTop: '1px solid var(--border-light)' */
         }}>
           <button 
-            onClick={onClear}
-            style={{ ...styles.button, ...styles.secondaryButton }}
+            onClick={clearCurrentFields}
+            disabled={fieldsToRender.length === 0}
+            style={{ 
+              ...styles.button, 
+              ...styles.secondaryButton,
+              opacity: fieldsToRender.length === 0 ? 0.6 : 1,
+              cursor: fieldsToRender.length === 0 ? 'not-allowed' : 'pointer'
+            }}
           >
-            Clear All
+            Clear All Fields
           </button>
+
+          {extractedData && Object.keys(extractedData).length > 0 && (
+            <button 
+              onClick={() => {
+                // Populate with extracted data for current fields only
+                fieldsToRender.forEach(field => {
+                  if (extractedData[field.id]) {
+                    onFieldChange(field.id, extractedData[field.id]);
+                  }
+                });
+              }}
+              style={{ ...styles.button, ...styles.primaryButton }}
+            >
+              Use Extracted Data
+            </button>
+          )}
         </div>
+
+        {fieldsToRender.length === 0 && (
+          <p style={{
+            color: 'var(--text-tertiary)',
+            fontSize: '0.875rem',
+            fontStyle: 'italic',
+            textAlign: 'center',
+            marginTop: '1rem'
+          }}>
+            Configure fields in the Field Configuration section above to start entering verification data.
+          </p>
+        )}
       </div>
     </div>
   );

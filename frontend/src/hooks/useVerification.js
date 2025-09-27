@@ -6,7 +6,7 @@ export const useVerification = () => {
   const [isVerifying, setIsVerifying] = useState(false);
   const [verificationError, setVerificationError] = useState('');
 
-  const handleVerification = async (file, submittedData) => {
+  const handleVerification = async (file, submittedData, fields) => {
     console.log('🔍 handleVerification called with:', { 
       file: file ? file.name : 'no file', 
       dataKeys: Object.keys(submittedData || {}) 
@@ -33,7 +33,7 @@ export const useVerification = () => {
 
     try {
       console.log('📞 Calling verifyDocumentData API...');
-      const result = await verifyDocumentData(file, submittedData);
+      const result = await verifyDocumentData(file, submittedData, fields);
       
       console.log('✅ Verification successful:', result);
       setVerificationResult(result.verification_result);

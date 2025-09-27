@@ -1,13 +1,13 @@
 export const englishFields = [
-  { id: 'name', label: 'Name', type: 'text', placeholder: 'Enter full name' },
-  { id: 'age', label: 'Age', type: 'number', placeholder: 'Enter age' },
-  { id: 'gender', label: 'Gender', type: 'select', options: ['Male', 'Female', 'Other'] },
-  { id: 'dob', label: 'Date of Birth', type: 'text', placeholder: 'YYYY-MM-DD' },
-  { id: 'address', label: 'Address', type: 'text', placeholder: 'Enter address' },
-  { id: 'country', label: 'Country', type: 'text', placeholder: 'Enter country' },
-  { id: 'phone', label: 'Phone', type: 'tel', placeholder: 'Enter phone number' },
-  { id: 'email', label: 'Email', type: 'email', placeholder: 'Enter email address' },
-  { id: 'id_number', label: 'ID Number', type: 'text', placeholder: 'Enter ID number' }
+  { id: 'Name', label: 'Name', type: 'text', placeholder: 'Enter full name' },
+  { id: 'Age', label: 'Age', type: 'number', placeholder: 'Enter age' },
+  { id: 'Gender', label: 'Gender', type: 'select', options: ['Male', 'Female', 'Other'] },
+  { id: 'DOB', label: 'Date of Birth', type: 'text', placeholder: 'YYYY-MM-DD' },
+  { id: 'Address', label: 'Address', type: 'text', placeholder: 'Enter address' },
+  { id: 'Country', label: 'Country', type: 'text', placeholder: 'Enter country' },
+  { id: 'Phone', label: 'Phone', type: 'tel', placeholder: 'Enter phone number' },
+  { id: 'Email', label: 'Email', type: 'email', placeholder: 'Enter email address' },
+  { id: 'ID', label: 'ID Number', type: 'text', placeholder: 'Enter ID number' }
 ];
 
 export const chineseFields = [

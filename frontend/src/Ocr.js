@@ -989,7 +989,7 @@ const OCRProjectUI = () => {
   const [selectedTemplate, setSelectedTemplate] = useState('en');
 
   // File upload hook
-  const { uploadedFiles, handleFileUpload, removeFile, clearFiles } = useFileUpload(false);
+  const { uploadedFiles, handleFileUpload, removeFile, clearFiles } = useFileUpload(true);
 
   // Single page extraction hook
   const {

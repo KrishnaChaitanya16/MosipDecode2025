@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { extractOCRDataWithDetection } from '../utils/apiService';
 import { parseErrorMessage } from '../utils/errorHandling';
 
+
 export const useOCRDetection = () => {
   const [extractedData, setExtractedData] = useState(null);
   const [confidenceData, setConfidenceData] = useState(null);
@@ -11,7 +12,7 @@ export const useOCRDetection = () => {
   const [error, setError] = useState('');
   const [errorDetails, setErrorDetails] = useState(null);
 
-  const extractWithDetection = async (file, language) => {
+  const extractWithDetection = async (file, language, fields) => {
     if (!file) return;
 
     setIsExtracting(true);
@@ -19,7 +20,7 @@ export const useOCRDetection = () => {
     setErrorDetails(null);
     
     try {
-      const result = await extractOCRDataWithDetection(file, language);
+      const result = await extractOCRDataWithDetection(file, language, fields);
       
       if (result.error) {
         const errorMsg = result.error;
@@ -28,19 +29,32 @@ export const useOCRDetection = () => {
         return;
       }
       
-      const mapped = result.mapped_fields.mapped_fields || {};
+      // Handle new format where mapped_fields contains direct values
+      const mapped = result.mapped_fields || {};
       const unwrapped = {};
       const confidence = {};
       
+      // Since mapped_fields now contains direct values, just use them as is
       Object.keys(mapped).forEach((key) => {
-        unwrapped[key] = mapped[key]?.value ?? null;
-        confidence[key] = mapped[key]?.confidence ?? null;
+        unwrapped[key] = mapped[key]; // Direct value, no .value property
       });
+
+      // Extract confidence data from detections array
+      // Match field names with detection text to get confidence scores
+      if (Array.isArray(result.detections)) {
+        result.detections.forEach((detection) => {
+          // Try to match detection text with field values to assign confidence
+          Object.keys(unwrapped).forEach((fieldKey) => {
+            if (unwrapped[fieldKey] === detection.text) {
+              confidence[fieldKey] = detection.confidence;
+            }
+          });
+        });
+      }
 
       setExtractedData(unwrapped);
       setConfidenceData(confidence);
       setOverlayImage(result.confidence_overlay);
-      // More robust check to ensure detections is always an array
       setDetections(Array.isArray(result.detections) ? result.detections : []);
 
     } catch (err) {
@@ -80,4 +94,3 @@ export const useOCRDetection = () => {
     handleDismissError,
   };
 };
-

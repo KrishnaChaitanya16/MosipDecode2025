@@ -1,4 +1,51 @@
 export const styles = {
+  // Add these to your styles.js export object:
+
+// Error Display Button Styles
+retryButton: {
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: 'var(--space-sm)',
+  padding: 'var(--space-sm) var(--space-lg)',
+  borderRadius: 'var(--radius-md)',
+  fontFamily: 'var(--font-family)',
+  fontSize: '0.95rem',
+  fontWeight: '500',
+  cursor: 'pointer',
+  transition: 'all var(--transition-fast)',
+  minWidth: '100px',
+  background: 'var(--bg-tertiary)',
+  color: 'var(--text-primary)',
+  border: '1px solid var(--border-medium)',
+},
+
+dismissButton: {
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: 'var(--space-sm)',
+  padding: 'var(--space-sm) var(--space-lg)',
+  borderRadius: 'var(--radius-md)',
+  fontFamily: 'var(--font-family)',
+  fontSize: '0.95rem',
+  fontWeight: '500',
+  cursor: 'pointer',
+  transition: 'all var(--transition-fast)',
+  minWidth: '100px',
+  background: 'var(--bg-tertiary)',
+  color: 'var(--text-primary)',
+  border: '1px solid var(--border-medium)',
+},
+
+errorActions: {
+  display: 'flex',
+  gap: 'var(--space-md)',
+  marginTop: 'var(--space-lg)',
+  flexWrap: 'wrap',
+  justifyContent: 'center',  // Add this line to center the buttons
+  alignItems: 'center',      // Add this line for vertical alignment
+},
   container: {
     minHeight: '100vh',
     background: 'linear-gradient(135deg, #f0f9ff 0%, #ffffff 50%, #faf5ff 100%)',
@@ -851,5 +898,6 @@ export const styles = {
       backgroundColor: '#f9fafb',
       borderRadius: '0.5rem',
       flexWrap: 'wrap'
-  }
+  },
+  
 };

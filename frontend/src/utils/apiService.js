@@ -1,16 +1,25 @@
 /**
- * Extracts OCR data from a single page of a document with detection data.
- * @param {File} file - The file to process.
- * @param {string} language - The language code for OCR processing (e.g., 'en', 'ch').
- * @returns {Promise<any>} - The JSON response from the API.
- */
+* Extracts OCR data from a single page of a document with detection data.
+* @param {File} file - The file to process.
+* @param {string} language - The language code for OCR processing (e.g., 'en', 'ch').
+* @param {string[]} fields - Array of field names to extract (optional).
+* @returns {Promise} - The JSON response from the API.
+*/
 const api_base2 = 'https://unmachineable-mauro-crucially.ngrok-free.dev'
 const api_base = 'http://127.0.0.1:8000';
-export const extractOCRDataWithDetection = async (file, language = 'en') => {
+
+export const extractOCRDataWithDetection = async (file, language = 'en', fields = null) => {
+  console.log("Fields");
+  console.log(fields);
   const formData = new FormData();
   formData.append('document', file);
   formData.append('include_detection', 'true');
   formData.append('language', language);
+
+  // Add fields parameter if provided
+  if (fields && fields.length > 0) {
+    formData.append('fields', JSON.stringify(fields));
+  }
 
   const response = await fetch(`${api_base}/extract`, {
     method: 'POST',
@@ -26,17 +35,23 @@ export const extractOCRDataWithDetection = async (file, language = 'en') => {
 };
 
 /**
- * Extracts OCR data from all pages of a PDF document.
- * @param {File} file - The PDF file to process.
- * @param {string} language - The language code for OCR processing.
- * @returns {Promise<any>} - The JSON response from the API.
- */
-export const extractMultipagePdfData = async (file, language = 'en') => {
+* Extracts OCR data from all pages of a PDF document.
+* @param {File} file - The PDF file to process.
+* @param {string} language - The language code for OCR processing.
+* @param {string[]} fields - Array of field names to extract (optional).
+* @returns {Promise} - The JSON response from the API.
+*/
+export const extractMultipagePdfData = async (file, language = 'en', fields = null) => {
   console.log(`📄 Starting multipage PDF extraction for: ${file.name} with language: ${language}`);
-  
+
   const formData = new FormData();
   formData.append('document', file);
   formData.append('language', language);
+
+  // Add fields parameter if provided
+  if (fields && fields.length > 0) {
+    formData.append('fields', JSON.stringify(fields));
+  }
 
   const response = await fetch(`${api_base}/extract/pdf/all`, {
     method: 'POST',
@@ -51,14 +66,13 @@ export const extractMultipagePdfData = async (file, language = 'en') => {
   return response.json();
 };
 
-
 /**
- * Verifies document data against submitted data.
- * @param {File} file - The file to verify against.
- * @param {object} submittedData - The data submitted by the user.
- * @returns {Promise<any>}
- */
-export const verifyDocumentData = async (file, submittedData) => {
+* Verifies document data against submitted data.
+* @param {File} file - The file to verify against.
+* @param {object} submittedData - The data submitted by the user.
+* @returns {Promise}
+*/
+export const verifyDocumentData = async (file, submittedData, fields = null) => {
   if (!file || !submittedData || Object.keys(submittedData).length === 0) {
     throw new Error('File and submission data are required for verification');
   }
@@ -66,6 +80,11 @@ export const verifyDocumentData = async (file, submittedData) => {
   const formData = new FormData();
   formData.append('document', file);
   formData.append('verification_data', JSON.stringify(submittedData));
+
+  // Add fields parameter if provided
+  if (fields && fields.length > 0) {
+    formData.append('fields', JSON.stringify(fields));
+  }
 
   const response = await fetch(`${api_base}/verify`, {
     method: 'POST',
@@ -80,11 +99,10 @@ export const verifyDocumentData = async (file, submittedData) => {
   return response.json();
 };
 
-
 /**
- * Checks the health of the API.
- * @returns {Promise<any>}
- */
+* Checks the health of the API.
+* @returns {Promise}
+*/
 export const checkAPIHealth = async () => {
   try {
     const response = await fetch(`${api_base}/health`);
