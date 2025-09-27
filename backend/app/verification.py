@@ -23,10 +23,6 @@ def verify_fields(submitted_data: dict, file_path: str, custom_fields: list = No
     Returns:
         dict: Verification results per field with match status and confidence.
     """
-    print("Starting verification process...")
-    print(f"Custom fields: {custom_fields}")
-    print(f"Submitted data: {submitted_data}")
-
     try:
         # Run OCR and extract structured fields
         ocr_result = extract_text(file_path)
@@ -59,7 +55,7 @@ def verify_fields(submitted_data: dict, file_path: str, custom_fields: list = No
 
         verification_results = {}
 
-        # Verify each submitted field
+        # FIXED LOGIC: More robust field matching
         for submitted_key, submitted_value in normalized_submitted.items():
             if not submitted_value or not str(submitted_value).strip():
                 continue
@@ -67,24 +63,50 @@ def verify_fields(submitted_data: dict, file_path: str, custom_fields: list = No
             submitted_clean = str(submitted_value).strip()
             best_match = None
             best_similarity = 0.0
+            matched_field_name = None
 
-            # Find the best matching extracted field
+            print(f"\nProcessing field: '{submitted_key}' = '{submitted_clean}'")
+
+            # IMPROVED: Find the best matching extracted field with better logic
             for extracted_key, extracted_value in extracted_fields.items():
-                # Direct key match or similar key match
+                # Check key similarity first
                 key_similarity = similarity(submitted_key, extracted_key)
+                print(f"  Key match: '{submitted_key}' vs '{extracted_key}' = {key_similarity:.3f}")
+
                 if key_similarity > 0.6:  # Keys are similar enough
                     value_similarity = similarity(submitted_clean, extracted_value)
-                    if value_similarity > best_similarity:
-                        best_similarity = value_similarity
-                        best_match = extracted_value
+                    print(f"    Value match: '{submitted_clean}' vs '{extracted_value}' = {value_similarity:.3f}")
 
-            # Also check for partial matches in all extracted values
-            if best_similarity < 0.5:
-                for extracted_value in extracted_fields.values():
-                    value_similarity = similarity(submitted_clean, extracted_value)
                     if value_similarity > best_similarity:
                         best_similarity = value_similarity
                         best_match = extracted_value
+                        matched_field_name = extracted_key
+                        print(f"    -> NEW BEST MATCH via key similarity: {best_match} (score: {best_similarity:.3f})")
+
+            # FIXED: Only do fallback matching if no good key match found AND with stricter criteria
+            if best_similarity < 0.3:  # Much stricter threshold
+                print(f"  No good key match found (best: {best_similarity:.3f}). Checking for exact field name match...")
+
+                # Look for exact field name match (case insensitive)
+                if submitted_key in extracted_fields:
+                    exact_match_value = extracted_fields[submitted_key]
+                    value_similarity = similarity(submitted_clean, exact_match_value)
+                    print(f"  Exact key match found: '{submitted_key}' -> '{exact_match_value}' (similarity: {value_similarity:.3f})")
+
+                    if value_similarity > best_similarity:
+                        best_similarity = value_similarity
+                        best_match = exact_match_value
+                        matched_field_name = submitted_key
+
+                # REMOVED: The problematic "check all values" loop that was causing incorrect matches
+
+            # If still no good match, mark as not found
+            if best_similarity < 0.1:  # Very low threshold for "not found"
+                best_match = "Not found in document"
+                best_similarity = 0.0
+                print(f"  -> FINAL RESULT: Field not found in document")
+            else:
+                print(f"  -> FINAL RESULT: Matched to '{matched_field_name}': '{best_match}' (score: {best_similarity:.3f})")
 
             # Determine verification status
             if best_similarity >= 0.8:
@@ -99,7 +121,8 @@ def verify_fields(submitted_data: dict, file_path: str, custom_fields: list = No
                 "extracted_value": best_match or "Not found",
                 "similarity_score": round(best_similarity, 3),
                 "status": status,
-                "confidence": round(best_similarity * 100, 1)
+                "confidence": round(best_similarity * 100, 1),
+                "matched_field": matched_field_name  # For debugging
             }
 
         # Overall verification score
@@ -115,7 +138,12 @@ def verify_fields(submitted_data: dict, file_path: str, custom_fields: list = No
             "overall_confidence": round(avg_similarity * 100, 1),
             "field_results": verification_results,
             "total_fields_checked": len(verification_results),
-            "extracted_text_available": len(extracted_fields) > 0
+            "extracted_text_available": len(extracted_fields) > 0,
+            "debug_info": {
+                "submitted_fields": list(normalized_submitted.keys()),
+                "extracted_fields": list(extracted_fields.keys()),
+                "custom_fields_used": custom_fields is not None
+            }
         }
 
         print(f"Final verification result: {final_result}")
