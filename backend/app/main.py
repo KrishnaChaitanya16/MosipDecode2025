@@ -15,18 +15,21 @@ from app.extraction import (
     map_fields as map_fields_en,
     create_confidence_overlay as create_confidence_overlay_en,
 )
+
 # Chinese processors
 from app.chinese_extraction import (
     extract_text_with_detection as extract_text_with_detection_ch,
     map_fields as map_fields_ch,
     create_confidence_overlay as create_confidence_overlay_ch
 )
+
 # Japanese processors
 from app.japanese_extraction import (
     extract_text_with_detection as extract_text_with_detection_ja,
     map_fields as map_fields_ja,
     create_confidence_overlay as create_confidence_overlay_ja
 )
+
 # Korean processors
 from app.korean_extraction import (
     extract_text_with_detection as extract_text_with_detection_ko,
@@ -38,9 +41,9 @@ from app.korean_extraction import (
 from app.verification import verify_fields
 from app.quality import check_image_quality
 from app.utils import (
-    is_pdf_file, 
-    get_pdf_page_count, 
-    convert_pdf_to_images, 
+    is_pdf_file,
+    get_pdf_page_count,
+    convert_pdf_to_images,
     save_image_temporarily
 )
 
@@ -96,28 +99,29 @@ def get_language_processors(lang: str):
         }
 
 # --- API Endpoints ---
-
 @app.post("/extract")
 async def extract(
     document: UploadFile = File(...),
     include_detection: str = Form(default="false"),
     page_number: int = Form(default=1),
-    language: str = Form(default="en")
+    language: str = Form(default="en"),
+    fields: str = Form(default="")  # NEW: fields parameter as JSON string
 ):
     """
     Extract text & structured fields from a document (image or single PDF page).
     Supports multiple languages: en, ch, ja, ko.
+    Now supports custom field extraction via 'fields' parameter.
     """
     file_id = str(uuid.uuid4())
     temp_path = os.path.join(UPLOAD_DIR, f"{file_id}_{document.filename}")
-    
+
     with open(temp_path, "wb") as buffer:
         shutil.copyfileobj(document.file, buffer)
-    
+
     try:
         processors = get_language_processors(language.lower())
         is_pdf = is_pdf_file(temp_path)
-        
+
         if not is_pdf:
             quality_report = check_image_quality(temp_path)
             if quality_report["score"] < 40:
@@ -128,14 +132,30 @@ async def extract(
                         "quality": quality_report
                     }
                 )
-        
+
+        # Parse fields parameter if provided
+        custom_fields = []
+        if fields and fields.strip():
+            try:
+                custom_fields = json.loads(fields)
+                logger.info(f"Custom fields received: {custom_fields}")
+            except json.JSONDecodeError as e:
+                logger.warning(f"Invalid fields JSON: {e}, using default fields")
+                custom_fields = []
+
         # Consistent extraction using the detailed function
         detection_result = processors["extract_with_detection"](temp_path, page_number=page_number)
+        print(detection_result)
+
         if "error" in detection_result:
             return JSONResponse(status_code=500, content={"error": detection_result["error"]})
-        
-        fields = processors["map_fields"](detection_result)
-        
+
+        # Pass custom fields to map_fields function
+        if custom_fields:
+            fields = processors["map_fields"](detection_result, custom_fields=custom_fields)
+        else:
+            fields = processors["map_fields"](detection_result)
+
         # Return detection data only if requested
         if include_detection.lower() == "true":
             overlay_image = processors["create_overlay"](temp_path, detection_result["detections"])
@@ -149,7 +169,8 @@ async def extract(
                     "language": detection_result.get("language", language),
                     "elapsed_time": detection_result.get("elapsed_time", 0),
                     "page_number": page_number,
-                    "is_pdf": is_pdf
+                    "is_pdf": is_pdf,
+                    "custom_fields_used": len(custom_fields) if custom_fields else 0
                 }
             }
         else:
@@ -160,9 +181,11 @@ async def extract(
                     "language": detection_result.get("language", language),
                     "elapsed_time": detection_result.get("elapsed_time", 0),
                     "page_number": page_number,
-                    "is_pdf": is_pdf
+                    "is_pdf": is_pdf,
+                    "custom_fields_used": len(custom_fields) if custom_fields else 0
                 }
             }
+
     finally:
         if os.path.exists(temp_path):
             os.remove(temp_path)
@@ -170,15 +193,16 @@ async def extract(
 @app.post("/extract/pdf/all")
 async def extract_pdf_all_pages(
     document: UploadFile = File(...),
-    language: str = Form(default="en")
+    language: str = Form(default="en"),
+    fields: str = Form(default="")  # NEW: fields parameter for multipage
 ):
     """Extract structured data from all pages of a PDF document in the specified language."""
     file_id = str(uuid.uuid4())
     temp_path = os.path.join(UPLOAD_DIR, f"{file_id}_{document.filename}")
-    
+
     with open(temp_path, "wb") as buffer:
         shutil.copyfileobj(document.file, buffer)
-        
+
     try:
         if not is_pdf_file(temp_path):
             return JSONResponse(status_code=400, content={"error": "File is not a PDF document"})
@@ -186,10 +210,20 @@ async def extract_pdf_all_pages(
         processors = get_language_processors(language.lower())
         extract_page_func = processors["extract_with_detection"]
         map_fields_func = processors["map_fields"]
-        
+
+        # Parse custom fields
+        custom_fields = []
+        if fields and fields.strip():
+            try:
+                custom_fields = json.loads(fields)
+                logger.info(f"Custom fields for multipage: {custom_fields}")
+            except json.JSONDecodeError as e:
+                logger.warning(f"Invalid fields JSON: {e}, using default fields")
+                custom_fields = []
+
         total_pages = get_pdf_page_count(temp_path)
         images = convert_pdf_to_images(temp_path, dpi=200)
-        
+
         processed_pages = {}
         for page_num, image in enumerate(images, 1):
             page_temp_path = save_image_temporarily(image, suffix='.png')
@@ -199,24 +233,32 @@ async def extract_pdf_all_pages(
                     processed_pages[str(page_num)] = {"error": page_data["error"], "page_number": page_num}
                     continue
 
-                page_fields = map_fields_func(page_data)
+                # Pass custom fields to map_fields
+                if custom_fields:
+                    page_fields = map_fields_func(page_data, custom_fields=custom_fields)
+                else:
+                    page_fields = map_fields_func(page_data)
+
                 processed_pages[str(page_num)] = {
                     "mapped_fields": page_fields,
                     "detections": page_data.get("detections", []),
                     "processing_info": {
                         "language": page_data.get("language", language),
-                        "page_number": int(page_num)
+                        "page_number": int(page_num),
+                        "custom_fields_used": len(custom_fields) if custom_fields else 0
                     }
                 }
             finally:
                 if os.path.exists(page_temp_path):
                     os.remove(page_temp_path)
-        
+
         return {
             "total_pages": total_pages,
             "pages": processed_pages,
-            "is_pdf": True
+            "is_pdf": True,
+            "custom_fields_used": len(custom_fields) if custom_fields else 0
         }
+
     finally:
         if os.path.exists(temp_path):
             os.remove(temp_path)
@@ -230,19 +272,19 @@ async def detect_text_regions(
     """Get text detection regions and confidence zones only for a specific language."""
     file_id = str(uuid.uuid4())
     temp_path = os.path.join(UPLOAD_DIR, f"{file_id}_{document.filename}")
-    
+
     with open(temp_path, "wb") as buffer:
         shutil.copyfileobj(document.file, buffer)
-    
+
     try:
         processors = get_language_processors(language.lower())
         detection_result = processors["extract_with_detection"](temp_path, page_number=page_number)
-        
+
         if "error" in detection_result:
             return JSONResponse(status_code=500, content={"error": detection_result["error"]})
-        
+
         overlay_image = processors["create_overlay"](temp_path, detection_result["detections"])
-        
+
         return {
             "detections": detection_result["detections"],
             "total_detections": detection_result["total_detections"],
@@ -253,36 +295,50 @@ async def detect_text_regions(
                 "is_pdf": detection_result.get("is_pdf", False)
             }
         }
+
     finally:
         if os.path.exists(temp_path):
             os.remove(temp_path)
 
 @app.post("/verify")
 async def verify_file(
-    document: UploadFile = File(...), 
-    verification_data: str = Form(...)
+    document: UploadFile = File(...),
+    verification_data: str = Form(...),
+    fields: str = Form(default="")  # NEW: Add fields parameter
 ):
-    """Verify submitted form data against OCR extracted fields (language-agnostic verification)."""
+    """
+    FIXED VERSION - Verify submitted form data against OCR extracted fields with custom fields support.
+    """
     file_id = str(uuid.uuid4())
     temp_path = os.path.join(UPLOAD_DIR, f"{file_id}_{document.filename}")
-    
+
     with open(temp_path, "wb") as buffer:
         shutil.copyfileobj(document.file, buffer)
-    
+
     try:
         try:
             submitted_data = json.loads(verification_data)
         except json.JSONDecodeError as e:
             return JSONResponse(status_code=400, content={"error": f"Invalid JSON in verification_data: {e}"})
-        
-        # Verification logic is assumed to be language-agnostic for now.
-        # It uses the default English extractor internally.
-        verification_result = verify_fields(submitted_data, temp_path)
-        
+
+        # Parse custom fields if provided
+        custom_fields = []
+        if fields and fields.strip():
+            try:
+                custom_fields = json.loads(fields)
+                logger.info(f"Custom fields for verification: {custom_fields}")
+            except json.JSONDecodeError as e:
+                logger.warning(f"Invalid fields JSON: {e}, proceeding without custom fields")
+                custom_fields = []
+
+        # CRITICAL FIX: Pass custom_fields to verify_fields function
+        verification_result = verify_fields(submitted_data, temp_path, custom_fields=custom_fields)
         return JSONResponse(content={"success": True, "verification_result": verification_result})
+
     except Exception as e:
         logger.error(f"Verification failed: {e}", exc_info=True)
         return JSONResponse(status_code=500, content={"error": f"Verification failed: {e}", "success": False})
+
     finally:
         if os.path.exists(temp_path):
             os.remove(temp_path)
@@ -295,7 +351,8 @@ async def health_check():
         "features": [
             "single_page_extraction", "multipage_pdf_extraction",
             "data_verification", "quality_assessment",
-            "confidence_zones", "bounding_box_detection"
+            "confidence_zones", "bounding_box_detection",
+            "custom_field_extraction"  # NEW feature
         ],
         "language_support": ["en", "ch", "ja", "ko"]
     }
@@ -305,14 +362,16 @@ async def root():
     """Root endpoint with API information."""
     return {
         "message": "Multilingual OCR Extraction & Verification API",
-        "version": "4.0.0",
+        "version": "4.1.0",  # Updated version
         "endpoints": {
-            "/extract": "Single page OCR (images/PDFs). Use 'language' form field ('en', 'ch', 'ja', 'ko').",
-            "/extract/pdf/all": "Extract all pages from a PDF. Use 'language' form field.",
+            "/extract": "Single page OCR (images/PDFs). Use 'language' and 'fields' form fields.",
+            "/extract/pdf/all": "Extract all pages from a PDF. Use 'language' and 'fields' form fields.",
             "/detect": "Text detection and confidence zones. Use 'language' form field.",
             "/verify": "Single page data verification.",
             "/health": "Health check"
         },
-        "supported_formats": ["PDF", "JPG", "JPEG", "PNG", "TIFF", "TIF"]
+        "supported_formats": ["PDF", "JPG", "JPEG", "PNG", "TIFF", "TIF"],
+        "new_features": {
+            "custom_fields": "Pass 'fields' parameter as JSON array to extract specific fields only"
+        }
     }
-

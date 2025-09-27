@@ -1,6 +1,5 @@
 from difflib import SequenceMatcher
-from app.extraction import map_fields, extract_text
-
+from app.extraction import map_fields, extract_text, extract_text_with_detection
 
 def similarity(a: str, b: str) -> float:
     """
@@ -11,136 +10,124 @@ def similarity(a: str, b: str) -> float:
         return 0.0
     return SequenceMatcher(None, str(a).lower().strip(), str(b).lower().strip()).ratio()
 
-
-def verify_fields(submitted_data: dict, file_path: str) -> dict:
+def verify_fields(submitted_data: dict, file_path: str, custom_fields: list = None) -> dict:
     """
-    Compare submitted form data with extracted fields from the scanned document.
+    FIXED VERSION - Compare submitted form data with extracted fields from the scanned document.
     Returns field-by-field verification with confidence score.
 
     Args:
-        submitted_data (dict): Form data submitted by the user.
+        submitted_data (dict): Form data submitted by the user (format: {"Name": "ananya"}).
         file_path (str): Path to the scanned document/image.
+        custom_fields (list): List of field names to verify (optional).
 
     Returns:
         dict: Verification results per field with match status and confidence.
     """
-    # Run OCR and extract structured fields
-    ocr_result = extract_text(file_path)
-    mapped_fields = map_fields(ocr_result)['mapped_fields']
-    
-    # Extract values from the new format: {"field": {"value": str, "confidence": float}}
-    extracted_fields = {}
-    extraction_confidences = {}
-    
-    for field_name, field_data in mapped_fields.items():
-        if isinstance(field_data, dict):
-            value = field_data.get("value")
-            confidence = field_data.get("confidence", 0.0)
-            
-            if value is not None and str(value).strip():
-                extracted_fields[field_name.lower()] = str(value).strip()
-                extraction_confidences[field_name.lower()] = confidence
+    print("Starting verification process...")
+    print(f"Custom fields: {custom_fields}")
+    print(f"Submitted data: {submitted_data}")
 
-    print(f"Extracted fields for verification: {extracted_fields}")
-    print(f"Extraction confidences: {extraction_confidences}")
+    try:
+        # Run OCR and extract structured fields
+        ocr_result = extract_text(file_path)
 
-    result = {
-        "verification_summary": {
-            "total_fields": len(submitted_data),
-            "matched_fields": 0,
-            "mismatched_fields": 0,
-            "not_found_fields": 0
-        },
-        "field_results": {},
-        "ocr_debug": {
-            "extracted_fields": extracted_fields,
-            "extraction_confidences": extraction_confidences
-        }
-    }
-
-    for field, submitted_value in submitted_data.items():
-        # Skip empty or None submitted values
-        if not submitted_value or str(submitted_value).strip() == "":
-            continue
-
-        field_lower = str(field).lower()
-        submitted_clean = str(submitted_value).strip()
-        extracted_value = extracted_fields.get(field_lower)
-        extraction_confidence = extraction_confidences.get(field_lower, 0.0)
-
-        if extracted_value:
-            # Calculate similarity score
-            similarity_score = similarity(submitted_clean, extracted_value)
-            
-            # Determine match status based on similarity threshold
-            if similarity_score >= 0.9:
-                status = "MATCH"
-                result["verification_summary"]["matched_fields"] += 1
-            elif similarity_score >= 0.7:
-                status = "PARTIAL_MATCH"
-                result["verification_summary"]["mismatched_fields"] += 1
-            else:
-                status = "MISMATCH"
-                result["verification_summary"]["mismatched_fields"] += 1
-            
-            result["field_results"][field_lower] = {
-                "submitted": submitted_clean,
-                "extracted": extracted_value,
-                "status": status,
-                "similarity_score": round(similarity_score, 3),
-                "extraction_confidence": round(extraction_confidence, 3) if extraction_confidence else None,
-                "overall_confidence": round((similarity_score + (extraction_confidence or 0)) / 2, 3)
-            }
+        # Use custom fields if provided for mapping
+        if custom_fields:
+            mapped_fields = map_fields(ocr_result, custom_fields=custom_fields)
         else:
-            result["verification_summary"]["not_found_fields"] += 1
-            result["field_results"][field_lower] = {
-                "submitted": submitted_clean,
-                "extracted": None,
-                "status": "NOT_FOUND",
-                "similarity_score": 0.0,
-                "extraction_confidence": None,
-                "overall_confidence": 0.0
+            mapped_fields = map_fields(ocr_result)
+
+        print(f"OCR mapped fields: {mapped_fields}")
+
+        # CRITICAL FIX: Extract values correctly from the nested structure
+        extracted_fields = {}
+        for field_name, field_data in mapped_fields.items():
+            if isinstance(field_data, dict) and 'value' in field_data:
+                # Extract the actual value from the nested structure
+                field_value = field_data.get('value')
+                if field_value is not None and str(field_value).strip():
+                    extracted_fields[field_name.lower()] = str(field_value).strip()
+            elif field_data is not None and str(field_data).strip():
+                # Handle direct value (fallback case)
+                extracted_fields[field_name.lower()] = str(field_data).strip()
+
+        print(f"Extracted fields for verification: {extracted_fields}")
+
+        # Normalize submitted data keys to lowercase for comparison
+        normalized_submitted = {k.lower(): v for k, v in submitted_data.items()}
+        print(f"Normalized submitted data: {normalized_submitted}")
+
+        verification_results = {}
+
+        # Verify each submitted field
+        for submitted_key, submitted_value in normalized_submitted.items():
+            if not submitted_value or not str(submitted_value).strip():
+                continue
+
+            submitted_clean = str(submitted_value).strip()
+            best_match = None
+            best_similarity = 0.0
+
+            # Find the best matching extracted field
+            for extracted_key, extracted_value in extracted_fields.items():
+                # Direct key match or similar key match
+                key_similarity = similarity(submitted_key, extracted_key)
+                if key_similarity > 0.6:  # Keys are similar enough
+                    value_similarity = similarity(submitted_clean, extracted_value)
+                    if value_similarity > best_similarity:
+                        best_similarity = value_similarity
+                        best_match = extracted_value
+
+            # Also check for partial matches in all extracted values
+            if best_similarity < 0.5:
+                for extracted_value in extracted_fields.values():
+                    value_similarity = similarity(submitted_clean, extracted_value)
+                    if value_similarity > best_similarity:
+                        best_similarity = value_similarity
+                        best_match = extracted_value
+
+            # Determine verification status
+            if best_similarity >= 0.8:
+                status = "match"
+            elif best_similarity >= 0.5:
+                status = "partial_match"
+            else:
+                status = "no_match"
+
+            verification_results[submitted_key] = {
+                "submitted_value": submitted_clean,
+                "extracted_value": best_match or "Not found",
+                "similarity_score": round(best_similarity, 3),
+                "status": status,
+                "confidence": round(best_similarity * 100, 1)
             }
 
-    # Calculate overall verification score
-    total_processed = (result["verification_summary"]["matched_fields"] + 
-                      result["verification_summary"]["mismatched_fields"] + 
-                      result["verification_summary"]["not_found_fields"])
-    
-    if total_processed > 0:
-        match_rate = result["verification_summary"]["matched_fields"] / total_processed
-        result["verification_summary"]["overall_match_rate"] = round(match_rate, 3)
-    else:
-        result["verification_summary"]["overall_match_rate"] = 0.0
+        # Overall verification score
+        if verification_results:
+            avg_similarity = sum(r["similarity_score"] for r in verification_results.values()) / len(verification_results)
+            overall_status = "verified" if avg_similarity >= 0.7 else "partial" if avg_similarity >= 0.4 else "failed"
+        else:
+            avg_similarity = 0.0
+            overall_status = "no_data"
 
-    return result
+        final_result = {
+            "overall_status": overall_status,
+            "overall_confidence": round(avg_similarity * 100, 1),
+            "field_results": verification_results,
+            "total_fields_checked": len(verification_results),
+            "extracted_text_available": len(extracted_fields) > 0
+        }
 
+        print(f"Final verification result: {final_result}")
+        return final_result
 
-def quick_verify(submitted_data: dict, file_path: str) -> bool:
-    """
-    Quick verification that returns just True/False for overall document validity.
-    
-    Args:
-        submitted_data (dict): Form data submitted by the user.
-        file_path (str): Path to the scanned document/image.
-        
-    Returns:
-        bool: True if document passes verification, False otherwise.
-    """
-    verification_result = verify_fields(submitted_data, file_path)
-    
-    # Consider document valid if:
-    # 1. At least 70% of fields match
-    # 2. No critical mismatches (similarity < 0.5)
-    
-    overall_match_rate = verification_result["verification_summary"]["overall_match_rate"]
-    
-    # Check for critical mismatches
-    has_critical_mismatch = False
-    for field_result in verification_result["field_results"].values():
-        if (field_result["status"] == "MISMATCH" and 
-            field_result["similarity_score"] < 0.5):
-            has_critical_mismatch = True
-            break
-    
-    return overall_match_rate >= 0.7 and not has_critical_mismatch
+    except Exception as e:
+        print(f"Error in verification: {e}")
+        return {
+            "overall_status": "error",
+            "overall_confidence": 0.0,
+            "field_results": {},
+            "error": str(e),
+            "total_fields_checked": 0,
+            "extracted_text_available": False
+        }

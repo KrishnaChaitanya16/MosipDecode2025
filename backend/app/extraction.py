@@ -22,7 +22,8 @@ from .utils import (
 
 logger = logging.getLogger(__name__)
 
-NGROK_API_URL = "https://apologal-flutelike-bert.ngrok-free.dev/extract"
+NGROK_API_URL = "https://apologal-flutelike-bert.ngrok-free.dev"
+api_endpoint = f"{NGROK_API_URL}/extract"
 
 # ----------------------------
 # Load PHOCR model
@@ -540,16 +541,24 @@ def _calculate_confidence_for_text(texts: List[str], scores: List[float], extrac
     else:
         return sum(scores) / len(scores) if scores else 0.0
 
-def map_fields_via_api(ocr_text: str):
+def map_fields_via_api(ocr_text: str,custom_fields=None):
+    print("Custom Fields")
+    print(custom_fields)
     """
     Send OCR text to remote NuExtract API and get structured fields
     """
     try:
         payload = {"text": ocr_text}
-        headers = {"Content-Type": "application/json"}
+        if custom_fields is not None and len(custom_fields) > 0:
+            payload["fields"] = custom_fields
+
 
         logger.info(f"Sending text to NuExtract API (length={len(ocr_text)} chars)...")
-        response = requests.post(NGROK_API_URL, json=payload, headers=headers, timeout=30)
+        headers = {
+            "Content-Type": "application/json", 
+            "ngrok-skip-browser-warning": "true"  # CRITICAL for ngrok-free
+        }
+        response = requests.post(api_endpoint, json=payload, headers=headers, timeout=30)
 
         if response.status_code == 200:
             data = response.json()
@@ -568,7 +577,7 @@ def map_fields_via_api(ocr_text: str):
 
 
 # Example usage inside your extraction workflow
-def map_fields(result: dict) -> dict:
+def map_fields(result: dict, custom_fields: list = None) -> dict:
     """
     Enhanced map_fields using remote NuExtract API
     """
@@ -588,5 +597,5 @@ def map_fields(result: dict) -> dict:
         ]}
 
     # Call remote API
-    mapped_fields = map_fields_via_api(ocr_text)
+    mapped_fields = map_fields_via_api(ocr_text, custom_fields=custom_fields)
     return mapped_fields
