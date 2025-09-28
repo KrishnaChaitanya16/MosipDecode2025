@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { Square, AlertTriangle, FileText, CheckCircle, Home, Menu, X, Sun, Moon, Zap, Shield, Target, Layers, Globe, Camera, Upload, Edit3, AlertCircle, RefreshCw } from 'lucide-react';
 import { useFileUpload } from './hooks/useFileUpload';
 import { useOCRDetection } from './hooks/useOCRDetection';
-import { useMultipagePdf } from './hooks/useMultipagePdf';
 import { useFormData } from './hooks/useFormData';
 import { useVerification } from './hooks/useVerification';
+import { extractOCRDataWithDetection, extractMultipagePdfData } from './utils/apiService';
+import { parseErrorMessage } from './utils/errorHandling';
 import ExtractionTab from './components/tabs/ExtractionTab';
 import VerificationTab from './components/tabs/VerificationTab';
 // Inline CSS styles
@@ -627,7 +628,7 @@ const injectStyles = () => {
     }
 
     .feature-card li::before {
-      content: '✓';
+      content: 'âœ"';
       position: absolute;
       left: 0;
       color: var(--success);
@@ -998,11 +999,14 @@ const OCRProjectUI = () => {
   } = useOCRDetection();
 
   // Multipage PDF hook
-  const {
-    multipageResults, isProcessing: isProcessingMultipage, error: multipageError,
-    errorDetails: multipageErrorDetails, processMultipagePdf, clearResults: clearMultipage,
-    handleDismissError: handleDismissMultipageError
-  } = useMultipagePdf();
+
+
+  // Multi-image extraction state
+  const [multiImageResults, setMultiImageResults] = useState({});
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [isProcessingMultiImage, setIsProcessingMultiImage] = useState(false);
+  const [multiImageError, setMultiImageError] = useState('');
+  const [multiImageErrorDetails, setMultiImageErrorDetails] = useState(null);
 
   // Form data for verification tab
   const { verificationData, updateField, populateForm, clearForm } = useFormData();
@@ -1031,10 +1035,356 @@ const OCRProjectUI = () => {
     localStorage.setItem('theme', darkMode ? 'dark' : 'light');
   }, [darkMode]);
 
+// Convert PDF pages to images and then process as regular multi-image
+const convertPdfPagesToImages = async (pdfFile) => {
+  const api_base = 'http://127.0.0.1:8000';
+  
+  try {
+    console.log(`Converting PDF pages to images: ${pdfFile.name}`);
+    
+    const formData = new FormData();
+    formData.append('file', pdfFile);
+    
+    const response = await fetch(`${api_base}/pdf/convert-to-images`, {
+      method: 'POST',
+      body: formData
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Failed to convert PDF to images: ${response.status}`);
+    }
+    
+    const result = await response.json();
+    
+    if (result.error) {
+      throw new Error(result.error);
+    }
+    
+    // Convert base64 images to File objects
+    const imageFiles = [];
+    if (result.images && Array.isArray(result.images)) {
+      for (let i = 0; i < result.images.length; i++) {
+        const imageData = result.images[i];
+        try {
+          // Convert base64 to blob
+          const base64Data = imageData.replace(/^data:image\/[^;]+;base64,/, '');
+          const binaryString = atob(base64Data);
+          const bytes = new Uint8Array(binaryString.length);
+          for (let j = 0; j < binaryString.length; j++) {
+            bytes[j] = binaryString.charCodeAt(j);
+          }
+          const blob = new Blob([bytes], { type: 'image/png' });
+          const fileName = `${pdfFile.name.replace(/\.pdf$/i, '')}_page_${i + 1}.png`;
+          const file = new File([blob], fileName, { type: 'image/png' });
+          imageFiles.push(file);
+        } catch (error) {
+          console.error(`Error converting page ${i + 1} to file:`, error);
+          throw new Error(`Failed to convert page ${i + 1} to image file`);
+        }
+      }
+    }
+    
+    console.log(`Successfully converted ${imageFiles.length} pages to images`);
+    return imageFiles;
+    
+  } catch (error) {
+    console.error('Error converting PDF to images:', error);
+    throw error;
+  }
+};
+
+// Enhanced multi-image processing that handles both regular images and PDF pages
+const processMultipleImages = async (files, language, fields, isPdf = false) => {
+  console.log("Entered");
+  if (!files || files.length === 0) return;
+
+  setIsProcessingMultiImage(true);
+  setMultiImageError('');
+  setMultiImageErrorDetails(null);
+  setMultiImageResults({});
+  setCurrentImageIndex(0);
+
+  const results = {};
+  let hasErrors = false;
+
+  // Helper to normalize/process a successful result
+  const processSuccessResult = (key, fileName, fileIndex, resultObj) => {
+    const mapped = resultObj.mapped_fields || {};
+    const unwrapped = {};
+    const confidence = {};
+
+    Object.keys(mapped).forEach((k) => {
+      unwrapped[k] = mapped[k];
+    });
+
+    if (Array.isArray(resultObj.detections)) {
+      resultObj.detections.forEach((detection) => {
+        Object.keys(unwrapped).forEach((fieldKey) => {
+          // match detected text with extracted value to attach confidence
+          if (unwrapped[fieldKey] === detection.text) {
+            confidence[fieldKey] = detection.confidence;
+          }
+        });
+      });
+    }
+
+    results[key] = {
+      fileName,
+      fileIndex,
+      extractedData: unwrapped,
+      confidenceData: confidence,
+      overlayImage: resultObj.confidence_overlay,
+      detections: Array.isArray(resultObj.detections) ? resultObj.detections : [],
+      hasError: false
+    };
+  };
+
+  try {
+    let filesToProcess = files;
+    let keyPrefix = 'image';
+    
+    // If it's a PDF, convert pages to images first
+    if (isPdf && files.length === 1) {
+      const pdfFile = files[0];
+      console.log(`Processing PDF: ${pdfFile.name} - Converting pages to images first`);
+      
+      try {
+        filesToProcess = await convertPdfPagesToImages(pdfFile);
+        keyPrefix = 'image';
+        console.log(`PDF converted to ${filesToProcess.length} image files`);
+      } catch (error) {
+        throw new Error(`PDF conversion failed: ${error.message}`);
+      }
+    }
+    // Now process all files (either original images or converted PDF pages) as regular images
+    for (let i = 0; i < filesToProcess.length; i++) {
+      const file = filesToProcess[i];
+      const fileKey = `${keyPrefix}_${i + 1}`;
+
+      try {
+        console.log(`Processing ${keyPrefix} ${i + 1}/${filesToProcess.length}: ${file.name}`);
+
+        const result = await extractOCRDataWithDetection(file, language, fields);
+
+        if (result.error) {
+          results[fileKey] = {
+            fileName: file.name,
+            fileIndex: i,
+            error: result.error,
+            hasError: true
+          };
+          hasErrors = true;
+        } else {
+          processSuccessResult(fileKey, file.name, i, result);
+        }
+      } catch (error) {
+        console.error(`Error processing ${file.name}:`, error);
+        results[fileKey] = {
+          fileName: file.name,
+          fileIndex: i,
+          error: error.message || 'Processing failed',
+          hasError: true
+        };
+        hasErrors = true;
+      }
+    }
+
+    setMultiImageResults(results);
+    console.log("Results");
+    console.log(results);
+
+    if (hasErrors) {
+      const errorCount = Object.values(results).filter(r => r.hasError).length;
+      const successCount = Object.keys(results).length - errorCount;
+      const itemType = isPdf ? 'pages' : 'images';
+      const total = Object.keys(results).length;
+      setMultiImageError(`Processed ${successCount}/${total} ${itemType} successfully. ${errorCount} ${itemType} failed.`);
+    }
+
+  } catch (error) {
+    const errorMsg = error.message || (isPdf ? 'PDF processing failed' : 'Multi-image processing failed');
+    setMultiImageError(errorMsg);
+    setMultiImageErrorDetails(parseErrorMessage(errorMsg));
+  } finally {
+    setIsProcessingMultiImage(false);
+  }
+};
+
+  // PDF multipage processing - convert PDF pages to images and process like multi-image
+  const processMultipagePdfAsImages = async (pdfFile, language, fields) => {
+    if (!pdfFile) return;
+
+    setIsProcessingMultiImage(true);
+    setMultiImageError('');
+    setMultiImageErrorDetails(null);
+    setMultiImageResults({});
+    setCurrentImageIndex(0);
+
+    const api_base = 'http://127.0.0.1:8000'; // Define API base URL
+    const results = {};
+    let hasErrors = false;
+
+    try {
+      console.log(`Processing PDF: ${pdfFile.name}`);
+      
+      // First, get the total number of pages by calling the PDF endpoint
+      const pdfResult = await extractMultipagePdfData(pdfFile, language, fields);
+      
+      if (pdfResult.error) {
+        setMultiImageError(`Failed to process PDF: ${pdfResult.error}`);
+        setMultiImageErrorDetails(parseErrorMessage(pdfResult.error));
+        return;
+      }
+
+      const totalPages = pdfResult.total_pages || 1;
+      console.log(`PDF has ${totalPages} pages, processing each page...`);
+
+      // Process each page separately using single page extraction
+      for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
+        const fileKey = `page_${pageNum}`;
+        
+        try {
+          console.log(`Processing page ${pageNum}/${totalPages}`);
+          
+          // Create FormData for single page extraction with page number
+          const formData = new FormData();
+          formData.append('document', pdfFile);
+          formData.append('include_detection', 'true');
+          formData.append('language', language);
+          formData.append('page_number', pageNum.toString()); // Specify which page to extract
+          
+          if (fields && fields.length > 0) {
+            formData.append('fields', JSON.stringify(fields));
+          }
+
+          const response = await fetch(`${api_base}/extract`, {
+            method: 'POST',
+            body: formData
+          });
+
+          if (!response.ok) {
+            throw new Error(`Page ${pageNum} extraction failed: ${response.status}`);
+          }
+
+          const result = await response.json();
+          
+          if (result.error) {
+            results[fileKey] = {
+              fileName: `${pdfFile.name} - Page ${pageNum}`,
+              fileIndex: pageNum - 1,
+              error: result.error,
+              hasError: true
+            };
+            hasErrors = true;
+          } else {
+            // Handle new format where mapped_fields contains direct values
+            const mapped = result.mapped_fields || {};
+            const unwrapped = {};
+            const confidence = {};
+            
+            Object.keys(mapped).forEach((key) => {
+              unwrapped[key] = mapped[key];
+            });
+
+            // Extract confidence data from detections array
+            if (Array.isArray(result.detections)) {
+              result.detections.forEach((detection) => {
+                Object.keys(unwrapped).forEach((fieldKey) => {
+                  if (unwrapped[fieldKey] === detection.text) {
+                    confidence[fieldKey] = detection.confidence;
+                  }
+                });
+              });
+            }
+
+            results[fileKey] = {
+              fileName: `${pdfFile.name} - Page ${pageNum}`,
+              fileIndex: pageNum - 1,
+              extractedData: unwrapped,
+              confidenceData: confidence,
+              overlayImage: result.confidence_overlay,
+              detections: Array.isArray(result.detections) ? result.detections : [],
+              hasError: false
+            };
+          }
+        } catch (error) {
+          console.error(`Error processing page ${pageNum}:`, error);
+          results[fileKey] = {
+            fileName: `${pdfFile.name} - Page ${pageNum}`,
+            fileIndex: pageNum - 1,
+            error: error.message || 'Page processing failed',
+            hasError: true
+          };
+          hasErrors = true;
+        }
+      }
+
+      setMultiImageResults(results);
+      
+      if (hasErrors) {
+        const errorCount = Object.values(results).filter(r => r.hasError).length;
+        const successCount = totalPages - errorCount;
+        setMultiImageError(`Processed ${successCount}/${totalPages} pages successfully. ${errorCount} pages failed.`);
+      }
+      
+    } catch (error) {
+      setMultiImageError(error.message || 'PDF processing failed');
+      setMultiImageErrorDetails(parseErrorMessage(error.message));
+    } finally {
+      setIsProcessingMultiImage(false);
+    }
+  };
+
+  const navigateToImage = (index) => {
+    const totalImages = Object.keys(multiImageResults).length;
+    if (index >= 0 && index < totalImages) {
+      setCurrentImageIndex(index);
+    }
+  };
+
+  const nextImage = () => {
+    const totalImages = Object.keys(multiImageResults).length;
+    if (currentImageIndex < totalImages - 1) {
+      setCurrentImageIndex(currentImageIndex + 1);
+    }
+  };
+
+  const prevImage = () => {
+    if (currentImageIndex > 0) {
+      setCurrentImageIndex(currentImageIndex - 1);
+    }
+  };
+
+  const updateImageField = (imageIndex, fieldId, value) => {
+    const imageKey = `image_${imageIndex}`;
+    setMultiImageResults(prev => ({
+      ...prev,
+      [imageKey]: {
+        ...prev[imageKey],
+        extractedData: {
+          ...prev[imageKey]?.extractedData,
+          [fieldId]: value
+        }
+      }
+    }));
+  };
+
+  const clearMultiImageResults = () => {
+    setMultiImageResults({});
+    setCurrentImageIndex(0);
+    setMultiImageError('');
+    setMultiImageErrorDetails(null);
+  };
+
+  const handleDismissMultiImageError = () => {
+    setMultiImageError('');
+    setMultiImageErrorDetails(null);
+  };
+
   const clearAllExtractions = () => {
     clearExtraction();
-    clearMultipage();
     clearVerificationResult();
+    clearMultiImageResults();
   };
 
   const handleFileChange = (files) => {
@@ -1146,12 +1496,19 @@ const OCRProjectUI = () => {
               singlePageError={error}
               singlePageErrorDetails={errorDetails}
               onDismissSinglePageError={handleDismissError}
-              onExtractMultipage={processMultipagePdf}
-              multipageData={multipageResults}
-              isExtractingMultipage={isProcessingMultipage}
-              multipageError={multipageError}
-              multipageErrorDetails={multipageErrorDetails}
-              onDismissMultipageError={handleDismissMultipageError}
+              onExtractMultipage={processMultipagePdfAsImages}
+              multiImageData={multiImageResults}
+              currentImageIndex={currentImageIndex}
+              isProcessingMultiImage={isProcessingMultiImage}
+              multiImageError={multiImageError}
+              multiImageErrorDetails={multiImageErrorDetails}
+              onProcessMultipleImages={processMultipleImages}
+              onNavigateToImage={navigateToImage}
+              onNextImage={nextImage}
+              onPrevImage={prevImage}
+              onDismissMultiImageError={handleDismissMultiImageError}
+              onUpdateImageField={updateImageField}
+              onClearMultiImageResults={clearMultiImageResults}
               onFieldChange={handleFieldChange}
             />
           )}

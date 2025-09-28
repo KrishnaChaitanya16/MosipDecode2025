@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { FileText, Edit3, Camera, Layers, Globe, Target, Plus, X, Settings, RefreshCw } from 'lucide-react';
+import { FileText, Edit3, Camera, Layers, Globe, Target, Plus, X, Settings, RefreshCw, Image as ImageIcon } from 'lucide-react';
 import { styles } from '../../constants/styles';
 import { templates } from '../../constants/fields';
 import FileUploadArea from '../upload/FileUploadArea';
 import ErrorDisplay from '../common/ErrorDisplay';
-import FormField from '../common/FormField';
-import ConfidenceOverlay from '../detection/ConfidenceOverlay';
+import UnifiedResultsComponent from './UnifiedResultsComponent';
 import MultipageResults from '../batch/BatchResults';
 
 const ExtractionTab = ({
@@ -13,15 +12,19 @@ const ExtractionTab = ({
   uploadedFiles, onFileUpload, onCameraCapture, onRemoveFile,
   // Template/Language
   selectedTemplate, onTemplateChange,
-  // Single Page Extraction
+  // Single Page Extraction (now unified with multi-image)
   onExtractSinglePage, singlePageData, isExtractingSingle, singlePageError, singlePageErrorDetails, onDismissSinglePageError,
-  // Multipage Extraction
-  onExtractMultipage, multipageData, isExtractingMultipage, multipageError, multipageErrorDetails, onDismissMultipageError,
+  // Multipage PDF Extraction - REMOVED THE OLD APPROACH
+  // Multi-image extraction (includes PDF pages processed as images)
+  multiImageData, currentImageIndex, isProcessingMultiImage, multiImageError, multiImageErrorDetails, onProcessMultipleImages, onNavigateToImage, onNextImage, onPrevImage, onDismissMultiImageError, onUpdateImageField, onClearMultiImageResults,
   // Field updates
   onFieldChange
 }) => {
-  const firstFile = uploadedFiles.length > 0 ? uploadedFiles[0] : null;
-  const isProcessing = isExtractingSingle || isExtractingMultipage;
+  const hasFiles = uploadedFiles.length > 0;
+  const firstFile = hasFiles ? uploadedFiles[0] : null;
+  const isMultipleFiles = uploadedFiles.length > 1;
+  const isPdfFile = firstFile && firstFile.type === 'application/pdf';
+  const isProcessing = isExtractingSingle || isProcessingMultiImage;
   const activeTemplate = templates[selectedTemplate];
 
   // Field customization state
@@ -39,7 +42,7 @@ const ExtractionTab = ({
     }
   }, [selectedTemplate]);
 
-  // Dark mode styles (CSS-in-JS approach using CSS variables)
+  // Field manager styles
   const fieldManagerStyles = {
     container: {
       padding: '1rem',
@@ -152,22 +155,34 @@ const ExtractionTab = ({
     }
   };
 
-  const handleSinglePageExtract = () => {
-    if (uploadedFiles.length > 0) {
-      // Extract field names for API call
-      const fieldNames = customFields.map(field => field.id);
-      console.log("Field Names");
-      console.log(fieldNames);
+  // Determine extraction button text and handler
+  const getExtractionButtonText = () => {
+    if (isExtractingSingle || isProcessingMultiImage) return 'Extracting...';
+    if (isMultipleFiles && !isPdfFile) return `Extract ${uploadedFiles.length} Images`;
+    return 'Extract';
+  };
+
+  const handleExtract = () => {
+    if (!hasFiles || customFields.length === 0) return;
+    
+    const fieldNames = customFields.map(field => field.id);
+    
+    if (isMultipleFiles && !isPdfFile) {
+      // Multiple image files
+      onProcessMultipleImages(uploadedFiles, activeTemplate.langCode, fieldNames);
+    } else {
+      // Single file (image or PDF with single page extraction)
       onExtractSinglePage(firstFile, activeTemplate.langCode, fieldNames);
     }
   };
 
+  // NEW: Handle PDF multipage extraction using the same logic as multi-image
   const handleMultipageExtract = () => {
-    if (uploadedFiles.length > 0) {
-      // Extract field names for API call
-      const fieldNames = customFields.map(field => field.id);
-      onExtractMultipage(firstFile, activeTemplate.langCode, fieldNames);
-    }
+    if (!firstFile || customFields.length === 0 || !isPdfFile) return;
+    
+    const fieldNames = customFields.map(field => field.id);
+    // Use the processMultipagePdfAsImages function from parent
+    onProcessMultipleImages([firstFile], activeTemplate.langCode, fieldNames, true); // Add isPdf flag
   };
 
   const addCustomField = () => {
@@ -206,6 +221,20 @@ const ExtractionTab = ({
     border: `1px solid ${showFieldManager ? 'var(--primary)' : 'var(--border-medium)'}`
   };
 
+  // Determine the result type for UnifiedResultsComponent
+  const getResultType = () => {
+    if (singlePageData && !multiImageData) return 'single';
+    if (multiImageData && Object.keys(multiImageData).length > 0) {
+      // Check if it's PDF pages or regular images
+      const firstKey = Object.keys(multiImageData)[0];
+      return firstKey.startsWith('page_') ? 'pdf' : 'multi-image';
+    }
+    return 'single';
+  };
+
+  const resultType = getResultType();
+  const totalItems = multiImageData ? Object.keys(multiImageData).length : 0;
+
   return (
     <div>
       {/* Step 1: Upload and Language Selection */}
@@ -225,7 +254,7 @@ const ExtractionTab = ({
           allowMultiple={true}
         />
 
-        {firstFile && (
+        {hasFiles && (
           <>
             <div style={styles.templateSelector}>
               <label htmlFor="template-select" style={styles.templateLabel}>
@@ -243,12 +272,39 @@ const ExtractionTab = ({
                 ))}
               </select>
             </div>
+
+            {/* File type indicator */}
+            <div style={{
+              padding: '0.75rem 1rem',
+              backgroundColor: 'var(--bg-secondary)',
+              borderRadius: '0.5rem',
+              marginTop: '1rem',
+              border: '1px solid var(--border-light)'
+            }}>
+              <div style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '0.5rem',
+                fontSize: '0.875rem',
+                color: 'var(--text-secondary)'
+              }}>
+                {isMultipleFiles ? <ImageIcon size={16} /> : <FileText size={16} />}
+                <span>
+                  {isMultipleFiles && !isPdfFile 
+                    ? `${uploadedFiles.length} images selected - will process all images separately`
+                    : isPdfFile 
+                      ? 'PDF document - use "Extract" for first page or "Extract All Pages" for multipage'
+                      : 'Single file selected'
+                  }
+                </span>
+              </div>
+            </div>
           </>
         )}
       </div>
 
       {/* Step 2: Template Field Configuration */}
-      {firstFile && (
+      {hasFiles && (
         <div style={styles.card}>
           <div style={styles.cardHeader}>
             <div style={{ ...styles.iconWrapper, ...styles.purpleIcon }}>
@@ -390,7 +446,7 @@ const ExtractionTab = ({
           {/* Extract Actions */}
           <div style={styles.actionsContainer}>
             <button 
-              onClick={handleSinglePageExtract} 
+              onClick={handleExtract} 
               disabled={isProcessing || customFields.length === 0}
               style={{ 
                 ...styles.button, 
@@ -399,71 +455,55 @@ const ExtractionTab = ({
                 cursor: (isProcessing || customFields.length === 0) ? 'not-allowed' : 'pointer'
               }}
             >
-              <Target size={18} />
-              {isExtractingSingle ? 'Extracting...' : 'Extract Single Page'}
+              {isMultipleFiles && !isPdfFile ? <ImageIcon size={18} /> : <Target size={18} />}
+              {getExtractionButtonText()}
             </button>
-            <button 
-              onClick={handleMultipageExtract} 
-              disabled={isProcessing || customFields.length === 0}
-              style={{ 
-                ...styles.button, 
-                ...styles.secondaryButton,
-                opacity: (isProcessing || customFields.length === 0) ? 0.6 : 1,
-                cursor: (isProcessing || customFields.length === 0) ? 'not-allowed' : 'pointer'
-              }}
-            >
-              <Layers size={18} />
-              {isExtractingMultipage ? 'Processing...' : 'Extract All Pages (PDF)'}
-            </button>
+            
+            {isPdfFile && (
+              <button 
+                onClick={handleMultipageExtract} 
+                disabled={isProcessing || customFields.length === 0}
+                style={{ 
+                  ...styles.button, 
+                  ...styles.secondaryButton,
+                  opacity: (isProcessing || customFields.length === 0) ? 0.6 : 1,
+                  cursor: (isProcessing || customFields.length === 0) ? 'not-allowed' : 'pointer'
+                }}
+              >
+                <Layers size={18} />
+                {isProcessingMultiImage ? 'Processing Pages...' : 'Extract All Pages (PDF)'}
+              </button>
+            )}
           </div>
 
+          {/* Error Displays */}
           <ErrorDisplay
             error={singlePageError}
             errorDetails={singlePageErrorDetails}
             onDismiss={onDismissSinglePageError}
           />
           <ErrorDisplay
-            error={multipageError}
-            errorDetails={multipageErrorDetails}
-            onDismiss={onDismissMultipageError}
+            error={multiImageError}
+            errorDetails={multiImageErrorDetails}
+            onDismiss={onDismissMultiImageError}
           />
         </div>
       )}
 
       {/* Step 3: View Results */}
-      {singlePageData && (
-        <div style={styles.resultsGrid}>
-          <ConfidenceOverlay
-            originalImage={firstFile}
-            overlayImage={singlePageData.overlayImage}
-            detections={singlePageData.extractedData ? Object.values(singlePageData.extractedData).length : 0}
-          />
-          <div style={styles.card}>
-            <div style={styles.cardHeader}>
-              <div style={{ ...styles.iconWrapper, ...styles.greenIcon }}>
-                <Edit3 style={{ color: '#16a34a' }} />
-              </div>
-              <h2 style={styles.cardTitle}>Extracted Form Data</h2>
-            </div>
-            <div style={{ ...styles.grid, ...styles.grid2 }}>
-              {customFields.map(field => (
-                <FormField
-                  key={field.id}
-                  field={field}
-                  value={singlePageData.extractedData ? singlePageData.extractedData[field.id] : ''}
-                  confidence={singlePageData.confidenceData ? singlePageData.confidenceData[field.id] : null}
-                  onChange={onFieldChange}
-                />
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {multipageData && (
-        <MultipageResults 
-          results={multipageData}
-          template={{ ...activeTemplate, fields: customFields }}
+      {/* Unified Results Display */}
+      {(singlePageData || (multiImageData && Object.keys(multiImageData).length > 0)) && (
+        <UnifiedResultsComponent
+          singlePageData={singlePageData}
+          multiImageData={multiImageData}
+          currentImageIndex={currentImageIndex}
+          totalImages={totalItems}
+          onNavigateToImage={onNavigateToImage}
+          onNextImage={onNextImage}
+          onPrevImage={onPrevImage}
+          fields={customFields}
+          onFieldChange={onFieldChange}
+          type={resultType}
         />
       )}
     </div>
