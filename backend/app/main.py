@@ -7,6 +7,13 @@ from fastapi import FastAPI, UploadFile, File, Form
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from PIL import Image
+from fastapi import FastAPI, File, UploadFile, HTTPException
+from fastapi.responses import JSONResponse
+import PyPDF2
+import io
+from pdf2image import convert_from_bytes
+from io import BytesIO
+import base64
 
 # --- Language-Specific Imports ---
 # Default English processors
@@ -124,7 +131,7 @@ async def extract(
 
         if not is_pdf:
             quality_report = check_image_quality(temp_path)
-            if quality_report["score"] < 40:
+            if quality_report["score"] < 30:
                 return JSONResponse(
                     status_code=400,
                     content={
@@ -356,6 +363,100 @@ async def health_check():
         ],
         "language_support": ["en", "ch", "ja", "ko"]
     }
+
+@app.post("/pdf/page-count")
+async def get_pdf_page_count(file: UploadFile = File(...)):
+    """
+    Endpoint to get the number of pages in a PDF file.
+    
+    Args:
+        file: PDF file uploaded via multipart/form-data
+        
+    Returns:
+        JSON response with page count
+    """
+    # Check if the uploaded file is a PDF
+    if not file.filename.lower().endswith('.pdf'):
+        raise HTTPException(status_code=400, detail="File must be a PDF")
+    
+    try:
+        # Read the uploaded file content
+        pdf_content = await file.read()
+        
+        # Create a BytesIO object from the PDF content
+        pdf_stream = io.BytesIO(pdf_content)
+        
+        # Create a PDF reader object
+        pdf_reader = PyPDF2.PdfReader(pdf_stream)
+        
+        # Get the number of pages
+        page_count = len(pdf_reader.pages)
+        
+        return JSONResponse(
+            status_code=200,
+            content={
+                "filename": file.filename,
+                "page_count": page_count,
+                "message": f"PDF contains {page_count} pages"
+            }
+        )
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, 
+            detail=f"Error processing PDF: {str(e)}"
+        )
+
+# Alternative endpoint that accepts PDF file path (for server-side files)
+@app.get("/pdf/page-count/{file_path:path}")
+async def get_pdf_page_count_by_path(file_path: str):
+    """
+    Endpoint to get page count of a PDF file by file path.
+    
+    Args:
+        file_path: Path to the PDF file on the server
+        
+    Returns:
+        JSON response with page count
+    """
+    try:
+        with open(file_path, 'rb') as pdf_file:
+            pdf_reader = PyPDF2.PdfReader(pdf_file)
+            page_count = len(pdf_reader.pages)
+            
+        return JSONResponse(
+            status_code=200,
+            content={
+                "file_path": file_path,
+                "page_count": page_count,
+                "message": f"PDF contains {page_count} pages"
+            }
+        )
+        
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="PDF file not found")
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error processing PDF: {str(e)}"
+        )
+
+@app.post("/pdf/convert-to-images")
+async def convert_pdf_to_images(file: UploadFile = File(...)):
+    try:
+        # Convert PDF to images using pdf2image or similar
+        images = convert_from_bytes(await file.read())
+        
+        base64_images = []
+        for i, image in enumerate(images):
+            buffer = BytesIO()
+            image.save(buffer, format='PNG')
+            img_base64 = base64.b64encode(buffer.getvalue()).decode()
+            base64_images.append(f"data:image/png;base64,{img_base64}")
+            
+        return {"images": base64_images}
+    except Exception as e:
+        return {"error": str(e)}
 
 @app.get("/")
 async def root():
