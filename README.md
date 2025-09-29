@@ -24,12 +24,12 @@ A robust solution that uses Optical Character Recognition(OCR) to seamlessly ext
 ## Problem Statement
 The process of manually extracting and verifiying information from physical documents like - application forms , ID cards , and certificates is inefficient and error prone.
 
-The traditional process in not only slow but also introduces high risk of data entry mistakes and inconsistencies. These inaccuracies can lead to compromised data integrity and siginificant delays in critical processes. Our solution aims to repplace this manual effort with automated that is fast , reliable and easy-to-use.
+The traditional process in not only slow but also introduces high risk of data entry mistakes and inconsistencies. These inaccuracies can lead to compromised data integrity and siginificant delays in critical processes. Our solution aims to replace this manual effort with automation that is fast , reliable and easy-to-use.
 
 ## Key Features
  1. **Automated Data Extraction**: 
  - Simply upload your document as a PDF or image to receive accurately extracted text in seconds, all while minimizing the errors commonly found in manual data entry.
- -  **Auto-Fill Digital Form**  using the extracted data for more accuratly and easily
+ -  **Auto-Fill Digital Form** smartly using the extracted data for more accuratly and easily
  - **Multi-Lingual Support**  - Our project is equipped to handle complex international character sets. It offers robust supoort for not only Latin-Based languages but also suports Non-Latin languages such as Chinese, Japanese, and Korean.
  2. **Data Verification**: 
  - This feature acts as a crucial safety net to ensure the absolute accuracy of your data.
@@ -58,9 +58,9 @@ The traditional process in not only slow but also introduces high risk of data e
 ## Tech Stack
  - ### Backend :
     - OCR Model - PHOCR(PaddleOCR)
-    - LLM for Intelligent Mapping - numind/NuExtract-1.5
+    - LLM for Intelligent Mapping - Qwen2.5-1.5B-Instruct
     - Server Logic - Python , FAST API
-    - LLM server - Google Colab
+    - LLM server - Google Colab/Kaggle Notebook(Preffered) , Ngrok
  - ### Frontend:
    - HTML /CSS
    - React.js
@@ -70,9 +70,12 @@ The traditional process in not only slow but also introduces high risk of data e
 
 ## Challenges and Solutions
  1. **Handling Tilted or Skewed Images**:
-- **The Challenge**: The OCR model's accuracy dropped significantly when a document was tilted by more than five degrees, often failing to extract text correctly.
+- **The Challenge**: The OCR model's accuracy dropped significantly when a document was tilted by more than 10° degrees, often failing to extract text correctly.
 
 - **The Solution**: We integrated a deskewing algorithm into the image preprocessing pipeline. This automatically detects and corrects the rotational angle of any input document, ensuring the text is properly aligned before the OCR engine processes it. This step made our extraction far more reliable on real-world scans.
+  
+-  ** The Result**: As a result, the system now maintains strong accuracy for images with skew angles of up to ±30°.
+  
 
 
 2. **Selecting the Optimal OCR Model**:
@@ -115,9 +118,9 @@ Make sure the following are installed before running the project:
 git clone https://github.com/KrishnaChaitanya16/MosipDecode2025.git
 ```
 > **Important Pre-Setup** : 
-   Before starting the backend server , you must run the ```mappingfinal.ipynb``` notebook in Google Colab:
+   Before starting the backend server , you must run the ```mapping.ipynb``` notebook in Google Colab/Kaggle Notebook with GPU accelerator support enabled:
 
-  - Open the notebook file ```backend/mappingfinal.ipynb``` in Google Colab.
+  - Open the notebook file ```backend/mapping.ipynb``` in Google Colab/Kaggle Notebook.
   - Click **Runtime -> Run all** to execute every cell.
   - Wait untill all cells finish and Ngrok sever starts running.
   - Copy the Ngrok server public url as shown in the below image
@@ -128,7 +131,7 @@ git clone https://github.com/KrishnaChaitanya16/MosipDecode2025.git
     <img width="1081" height="239" alt="Ngrok" src="https://github.com/user-attachments/assets/019d88ec-611f-4cdd-a31b-2c4f9108d9ef" />
 
   - Once the colab server starts running , proceed to backend server setup.
-> Note : If the collab seesion ends or expires or runs out of resources , please make sure to run the notebook in an new session.
+> Note : If the collab/Kaggle seesion ends or expires or runs out of resources , please make sure to run the notebook in an new session.
 
   
 2. Move to the backend folder:
