@@ -22,7 +22,7 @@ from .utils import (
 
 logger = logging.getLogger(__name__)
 
-NGROK_API_URL = "https://apologal-flutelike-bert.ngrok-free.dev"
+NGROK_API_URL = "http://127.0.0.1:9000"
 api_endpoint = f"{NGROK_API_URL}/extract"
 
 # ----------------------------
