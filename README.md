@@ -1,7 +1,8 @@
 
 # Optical Character Recognition (OCR) for Text Extraction and Verification
 
-A robust solution that uses Optical Character Recognition(OCR) to seamlessly extract text from scanned documents , and intelligently auto-fill digital forms , and verify the extracted data. It is built for people who are looking to eliminate manual data entry , reduce erros and  improve data processing efficiancy
+A robust solution that uses Optical Character Recognition (OCR) to seamlessly extract text from scanned documents, intelligently auto-fill digital forms, and verify the extracted data.
+Unlike most solutions that depend on cloud services or large models, our system can run fully offline, even on low-end computers. This makes it especially useful for adoption in remote areas without reliable network connectivity, ensuring accessibility and ease of setup anywhere.
 
 ## Video Demo
 
@@ -55,12 +56,21 @@ The traditional process in not only slow but also introduces high risk of data e
 5. **Real-time Confidence zones**: 
 - **Instant Visual Feedback**: Provides immediate feedback by drawing bounding boxes directly on the original document image.
 - **Shows OCR Confidence**: Each box is color-coded or labeled to show the confidence level of the text recognition inside it.
+6 . **Fully-Offline & Remote Friendly**:
+- **Works without internet connectivity**, ensuring adoption in remote or low-connectivity regions.
+- Protects data privacy by keeping all processing on local machines.
+- Optimized to run even on low-end hardware , reducing infrastructure costs.
+7. **Simple and Portable Setup**:
+- The entire and system can be deployed with simple commands using Docker
+- No cloud dependency , No External Configuration.
+- Suitable for on-premise deployment in schools, offices, and government agencies in rural areas.
+
 ## Tech Stack
  - ### Backend :
     - OCR Model - PHOCR(PaddleOCR)
     - LLM for Intelligent Mapping - Qwen2.5-1.5B-Instruct
     - Server Logic - Python , FAST API
-    - LLM server - Google Colab/Kaggle Notebook(Preffered) , Ngrok
+    - Ollama for offline functionality of LLM.
  - ### Frontend:
    - HTML /CSS
    - React.js
@@ -90,6 +100,10 @@ The results are shown in the graph below.
 - **Test Results** : Both performed equally well for high quality images , but when it came to low quality and languages other than english PHOCR performed better than TrOCR.
 
  After comparative testing, we switched to the PHOCR model. It demonstrated superior overall accuracy and, crucially, performed exceptionally well with complex character sets like Chinese and Japanese, where TrOCR had failed. This decision was key to achieving the project's multi-lingual requirements.
+3. **Ensuring Offline Functionality & Low-End Hardware Support**:
+- **The Challange**: Many OCR + AI solutions rely on cloud APIs or require powerful GPUs, making them unusable in remote areas without reliable internet and on low-cost hardware. This risked excluding the very users who need automation most.
+- **The Solution**: We re-architected the pipeline to run entirely offline, packaging OCR (PHOCR), LLM-based mapping (Qwen2.5-1.5B-Instruct), and FastAPI into a self-contained system. With lightweight optimization and Docker Compose setup, the solution can be launched in just two commands, even on machines with lower Hardware configurations.
+- **The Result** : The system is now deployable in remote regions, supporting low-resource environments and enabling adoption by local governments and organizations. This aligns with MOSIP’s mission to provide inclusive, secure, and accessible digital identity solutions globally.
 
 ## Getting Started 
  - ### Prerequisites:
