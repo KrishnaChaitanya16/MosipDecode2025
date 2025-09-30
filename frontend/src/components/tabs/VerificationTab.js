@@ -7,6 +7,7 @@ import DataEntryForm from '../verification/DataEntryForm';
 import VerificationResults from '../verification/VerificationResults';
 
 const VerificationTab = ({
+  onRemoveFile,
   uploadedFile,
   onFileUpload,
   onCameraCapture,
@@ -49,7 +50,6 @@ const VerificationTab = ({
   const fieldManagerStyles = {
     container: {
       padding: '1rem',
-      backgroundColor: 'var(--bg-secondary)',
       borderRadius: '0.5rem',
       marginBottom: '1rem',
       border: '1px solid var(--border-light)',
@@ -101,9 +101,9 @@ const VerificationTab = ({
       color: 'var(--text-primary)'
     },
     customField: {
-      backgroundColor: 'rgba(255, 159, 10, 0.1)',
-      borderColor: 'rgba(255, 159, 10, 0.3)',
-      color: 'var(--accent)'
+      backgroundColor: 'var(--bg-primary)',
+      borderColor: 'var(--border-light)',
+      color: 'var(--text-primary)'
     },
     fieldLabel: {
       fontWeight: '500',
@@ -140,7 +140,6 @@ const VerificationTab = ({
     },
     summary: {
       padding: '1rem',
-      backgroundColor: 'var(--bg-tertiary)',
       borderRadius: '0.5rem',
       marginBottom: '1rem',
       border: '1px solid var(--border-light)'
@@ -183,9 +182,12 @@ const VerificationTab = ({
     })));
   };
 
+  
+
   const fieldManagerButton = {
     ...styles.button,
     ...styles.secondaryButton,
+    marginLeft: 'auto',
     fontSize: '0.875rem',
     padding: '0.5rem 1rem',
     backgroundColor: showFieldManager ? 'var(--primary)' : 'var(--bg-tertiary)',
@@ -206,7 +208,7 @@ const VerificationTab = ({
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <div style={{ ...styles.iconWrapper, ...styles.purpleIcon }}>
-              <Settings style={{ color: '#7c3aed' }} />
+              <Settings style={{ color: '#007AFF' }} />
             </div>
             <h2 style={styles.cardTitle}>Verification Field Configuration</h2>
           </div>
@@ -363,17 +365,10 @@ const VerificationTab = ({
             </h3>
 
             <FileUploadArea 
-              onFileUpload={(files) => {
-                // Handle single file for verification
-                console.log('📁 Verification file upload:', files);
-                if (Array.isArray(files) && files.length > 0) {
-                  onFileUpload([files[0]]); // Only take the first file
-                } else if (files && files.length > 0) {
-                  onFileUpload([files[0]]);
-                }
-              }}
+              onFileUpload={onFileUpload}
               uploadedFiles={uploadedFile ? [uploadedFile] : []} 
               onCameraCapture={onCameraCapture}
+              onRemoveFile={onRemoveFile}
               allowMultiple={false}
             />
 

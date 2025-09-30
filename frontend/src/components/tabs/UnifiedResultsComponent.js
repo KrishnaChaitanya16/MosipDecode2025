@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, FileText, AlertTriangle, CheckCircle, Edit3, Download, Image as ImageIcon, Eye, EyeOff } from 'lucide-react';
 import { styles } from '../../constants/styles';
 import FormField from '../common/FormField';
+import * as XLSX from 'xlsx';
 
 const UnifiedResultsComponent = ({ 
   // Single image data
@@ -113,36 +114,59 @@ const UnifiedResultsComponent = ({
   };
 
   const exportResults = () => {
-    const exportData = {
-      type,
-      unified_form_data: unifiedFormData,
-      timestamp: new Date().toISOString()
-    };
+    // Prepare data for Excel export
+    const exportData = [];
     
-    if (type === 'multi-image') {
-      exportData.source_images = Object.values(multiImageData || {}).map(img => ({
-        fileName: img.fileName,
-        hasError: img.hasError,
-        extractedData: img.extractedData
+    // Add header and data rows
+    fields.forEach(field => {
+      exportData.push({
+        'Field Name': field.label || field.id,
+        'Extracted Value': unifiedFormData[field.id] || ''
+      });
+    });
+
+    // Add metadata sheet data
+    const metadataSheet = [{
+      'Export Type': type,
+      'Export Date': new Date().toISOString(),
+      'Total Fields': fields.length,
+      'Filled Fields': Object.values(unifiedFormData).filter(v => v && v.trim()).length
+    }];
+
+    // Create workbook
+    const wb = XLSX.utils.book_new();
+    
+    // Add main data sheet
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    XLSX.utils.book_append_sheet(wb, ws, 'Extracted Data');
+    
+    // Add metadata sheet
+    const wsMetadata = XLSX.utils.json_to_sheet(metadataSheet);
+    XLSX.utils.book_append_sheet(wb, wsMetadata, 'Metadata');
+
+    // If multi-image or PDF, add source information
+    if (type === 'multi-image' && multiImageData) {
+      const sourceData = Object.values(multiImageData).map((img, idx) => ({
+        'Image #': idx + 1,
+        'File Name': img.fileName,
+        'Status': img.hasError ? 'Failed' : 'Success',
+        'Fields Extracted': img.extractedData ? Object.keys(img.extractedData).length : 0
       }));
+      const wsSource = XLSX.utils.json_to_sheet(sourceData);
+      XLSX.utils.book_append_sheet(wb, wsSource, 'Source Images');
     } else if (type === 'pdf' && multiImageData) {
-      // For PDF processed as images
-      exportData.source_pages = Object.values(multiImageData || {}).map(page => ({
-        fileName: page.fileName,
-        hasError: page.hasError,
-        extractedData: page.extractedData
+      const sourceData = Object.values(multiImageData).map((page, idx) => ({
+        'Page #': idx + 1,
+        'File Name': page.fileName,
+        'Status': page.hasError ? 'Failed' : 'Success',
+        'Fields Extracted': page.extractedData ? Object.keys(page.extractedData).length : 0
       }));
+      const wsSource = XLSX.utils.json_to_sheet(sourceData);
+      XLSX.utils.book_append_sheet(wb, wsSource, 'Source Pages');
     }
-    
-    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `ocr_results_${new Date().toISOString().split('T')[0]}.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+
+    // Generate Excel file
+    XLSX.writeFile(wb, `ocr_results_${new Date().toISOString().split('T')[0]}.xlsx`);
   };
 
   const currentOverlayData = getCurrentOverlayData();
@@ -194,61 +218,14 @@ const UnifiedResultsComponent = ({
       {/* Confidence Overlay Panel */}
       <div style={styles.card}>
         <div style={styles.cardHeader}>
-          <div style={{ ...styles.iconWrapper, ...styles.purpleIcon }}>
-            {type === 'multi-image' ? <ImageIcon style={{ color: '#7c3aed' }} /> : <Eye style={{ color: '#7c3aed' }} />}
-          </div>
-          <h2 style={styles.cardTitle}>
+          <h3 style={styles.cardTitle}>
             {type === 'multi-image' 
               ? 'OCR Confidence Zones - Multi Image' 
               : type === 'pdf' 
                 ? 'OCR Confidence Zones - PDF Pages'
                 : 'OCR Confidence Zones'}
-          </h2>
-          
-          <button
-            onClick={() => setShowOverlay(!showOverlay)}
-            style={{
-              ...styles.button,
-              ...styles.secondaryButton,
-              marginLeft: 'auto',
-              fontSize: '0.875rem',
-              padding: '0.5rem 1rem'
-            }}
-          >
-            {showOverlay ? <EyeOff size={16} /> : <Eye size={16} />}
-            {showOverlay ? 'Hide Overlay' : 'Show Overlay'}
-          </button>
+          </h3>
         </div>
-
-        {/* Stats for multi-image or PDF */}
-        {stats && (
-          <div style={{ ...styles.grid, ...styles.grid3, marginBottom: '1rem' }}>
-            <div style={{ ...styles.statsCard, ...styles.statsGreen }}>
-              <div style={{ ...styles.statsNumber, color: '#16a34a', fontSize: '1.5rem' }}>
-                {stats.successful}
-              </div>
-              <div style={{ ...styles.statsLabel, color: '#15803d', fontSize: '0.75rem' }}>
-                Successful
-              </div>
-            </div>
-            <div style={{ ...styles.statsCard, ...styles.statsRed }}>
-              <div style={{ ...styles.statsNumber, color: '#dc2626', fontSize: '1.5rem' }}>
-                {stats.failed}
-              </div>
-              <div style={{ ...styles.statsLabel, color: '#991b1b', fontSize: '0.75rem' }}>
-                Failed
-              </div>
-            </div>
-            <div style={{ ...styles.statsCard, ...styles.statsBlue }}>
-              <div style={{ ...styles.statsNumber, color: '#2563eb', fontSize: '1.5rem' }}>
-                {stats.successRate}%
-              </div>
-              <div style={{ ...styles.statsLabel, color: '#1d4ed8', fontSize: '0.75rem' }}>
-                Success Rate
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* Navigation for multi-image or PDF */}
         {showNavigation && (
@@ -259,7 +236,6 @@ const UnifiedResultsComponent = ({
             gap: '1rem',
             marginBottom: '1rem',
             padding: '0.75rem',
-            backgroundColor: 'var(--bg-secondary)',
             borderRadius: '0.5rem',
             border: '1px solid var(--border-light)'
           }}>
@@ -325,37 +301,6 @@ const UnifiedResultsComponent = ({
           </div>
         )}
 
-        {/* Current image info */}
-        {currentOverlayData && (
-          <div style={{
-            backgroundColor: 'rgba(124, 58, 237, 0.1)',
-            border: '1px solid rgba(124, 58, 237, 0.2)',
-            borderRadius: '0.5rem',
-            padding: '0.75rem 1rem',
-            marginBottom: '1rem',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <FileText size={16} style={{ color: '#7c3aed' }} />
-              <span style={{ color: '#6b46c1', fontWeight: '500', fontSize: '0.875rem' }}>
-                {currentOverlayData.fileName}
-              </span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-              <span style={{ color: '#6b46c1', fontSize: '0.75rem' }}>
-                {currentOverlayData.detectionCount} detections
-              </span>
-              {hasOverlay ? (
-                <CheckCircle size={14} style={{ color: '#16a34a' }} />
-              ) : (
-                <AlertTriangle size={14} style={{ color: '#f59e0b' }} />
-              )}
-            </div>
-          </div>
-        )}
-
         {/* Image display area */}
         <div style={{
           position: 'relative',
@@ -398,64 +343,85 @@ const UnifiedResultsComponent = ({
 
       {/* Unified Form Panel */}
       <div style={styles.card}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-          <div style={styles.cardHeader}>
-            <div style={{ ...styles.iconWrapper, ...styles.greenIcon }}>
-              <Edit3 style={{ width: '1.25rem', height: '1.25rem', color: '#16a34a' }} />
-            </div>
-            <h2 style={styles.cardTitle}>
-              {type === 'multi-image' 
-                ? 'Unified Form Data (Merged from All Images)' 
-                : type === 'pdf'
-                  ? 'Unified Form Data (Merged from All Pages)'
-                  : 'Extracted Form Data'}
-            </h2>
-          </div>
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center', 
+          marginBottom: '1.5rem',
+          paddingBottom: '1rem',
+          borderBottom: '1px solid var(--border-light)'
+        }}>
+          <h3 style={styles.cardTitle}>
+            Extracted Data
+          </h3>
           
           <button
             onClick={exportResults}
-            style={{ ...styles.button, ...styles.primaryButton }}
+            style={{ 
+              ...styles.button, 
+              ...styles.primaryButton,
+              marginLeft: '1rem',
+              flexShrink: 0
+            }}
           >
             <Download size={16} />
-            Export Results
+            Export to Excel
           </button>
         </div>
 
-        {/* Field summary */}
-        <div style={{
-          backgroundColor: 'var(--bg-secondary)',
-          padding: '0.75rem 1rem',
-          borderRadius: '0.5rem',
-          marginBottom: '1.5rem',
-          border: '1px solid var(--border-light)'
+        {/* Unified form fields - Inline Layout */}
+        {/* Unified form fields - Horizontal Layout matching DataEntryForm */}
+        <div style={{ 
+          display: 'flex', 
+          flexDirection: 'column', 
+          gap: 'var(--space-xs)' 
         }}>
-          <div style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: '0.5rem',
-            color: 'var(--text-secondary)',
-            fontSize: '0.875rem'
-          }}>
-            <CheckCircle size={14} />
-            <span>
-              <strong>{Object.values(unifiedFormData).filter(v => v && v.trim()).length}</strong> of{' '}
-              <strong>{fields.length}</strong> fields populated
-              {type === 'multi-image' && ' (merged from multiple images)'}
-              {type === 'pdf' && ' (merged from multiple pages)'}
-            </span>
-          </div>
-        </div>
-
-        {/* Unified form fields */}
-        <div style={{ ...styles.grid, ...styles.grid2, gap: '1rem' }}>
           {fields.map(field => (
-            <FormField
-              key={field.id}
-              field={field}
-              value={unifiedFormData[field.id] || ''}
-              confidence={null} // We lose individual confidence scores in merged data
-              onChange={handleFieldChange}
-            />
+            <div key={field.id} style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 'var(--space-md)',
+              marginBottom: 'var(--space-sm)',
+              padding: 'var(--space-sm)',
+              borderRadius: 'var(--radius-sm)',
+            }}>
+              <label style={{
+                fontSize: '0.9rem',
+                fontWeight: '500',
+                color: 'var(--text-primary)',
+                minWidth: '80px',
+                textAlign: 'left',
+                marginBottom: 0
+              }}>
+                {field.label || field.id}:
+              </label>
+              <input
+                type={field.type || 'text'}
+                value={unifiedFormData[field.id] || ''}
+                onChange={(e) => handleFieldChange(field.id, e.target.value)}
+                placeholder={`Enter ${field.label || field.id}`}
+                style={{
+                  flex: 1,
+                  padding: 'var(--space-sm)',
+                  border: '1px solid var(--border-medium)',
+                  borderRadius: 'var(--radius-sm)',
+                  background: 'var(--bg-primary)',
+                  color: 'var(--text-primary)',
+                  fontSize: '0.9rem',
+                  fontFamily: 'var(--font-family)',
+                  transition: 'all var(--transition-fast)',
+                  boxSizing: 'border-box'
+                }}
+                onFocus={(e) => {
+                  e.target.style.borderColor = 'var(--primary)';
+                  e.target.style.boxShadow = '0 0 0 3px rgba(37, 99, 235, 0.1)';
+                }}
+                onBlur={(e) => {
+                  e.target.style.borderColor = 'var(--border-medium)';
+                  e.target.style.boxShadow = 'none';
+                }}
+              />
+            </div>
           ))}
         </div>
       </div>

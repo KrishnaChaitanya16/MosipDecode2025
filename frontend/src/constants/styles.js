@@ -170,7 +170,7 @@ errorActions: {
   greenIcon: { backgroundColor: '#dcfce7' },
   purpleIcon: { backgroundColor: '#f3e8ff' },
   cardTitle: {
-    fontSize: '1.25rem',
+    fontSize: '1rem',
     fontWeight: '600',
     color: '#1f2937'
   },

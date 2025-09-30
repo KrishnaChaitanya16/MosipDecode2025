@@ -46,10 +46,8 @@ const ExtractionTab = ({
   const fieldManagerStyles = {
     container: {
       padding: '1rem',
-      backgroundColor: 'var(--bg-secondary)',
       borderRadius: '0.5rem',
       marginBottom: '1rem',
-      border: '1px solid var(--border-light)',
       transition: 'all var(--transition-fast)'
     },
     addFieldContainer: {
@@ -98,9 +96,9 @@ const ExtractionTab = ({
       color: 'var(--text-primary)'
     },
     customField: {
-      backgroundColor: 'rgba(255, 159, 10, 0.1)',
-      borderColor: 'rgba(255, 159, 10, 0.3)',
-      color: 'var(--accent)'
+      backgroundColor: 'var(--bg-primary)',
+      borderColor: 'var(--border-light)',
+      color: 'var(--text-primary)'
     },
     fieldLabel: {
       fontWeight: '500',
@@ -137,10 +135,8 @@ const ExtractionTab = ({
     },
     summary: {
       padding: '1rem',
-      backgroundColor: 'var(--bg-tertiary)',
       borderRadius: '0.5rem',
       marginBottom: '1rem',
-      border: '1px solid var(--border-light)'
     },
     summaryText: {
       margin: 0,
@@ -159,6 +155,7 @@ const ExtractionTab = ({
   const getExtractionButtonText = () => {
     if (isExtractingSingle || isProcessingMultiImage) return 'Extracting...';
     if (isMultipleFiles && !isPdfFile) return `Extract ${uploadedFiles.length} Images`;
+    if(!isMultipleFiles && isPdfFile) return `Extract First Page`;
     return 'Extract';
   };
 
@@ -253,54 +250,6 @@ const ExtractionTab = ({
           onRemoveFile={onRemoveFile}
           allowMultiple={true}
         />
-
-        {hasFiles && (
-          <>
-            <div style={styles.templateSelector}>
-              <label htmlFor="template-select" style={styles.templateLabel}>
-                Document Language:
-              </label>
-              <select
-                id="template-select"
-                value={selectedTemplate}
-                onChange={(e) => onTemplateChange(e.target.value)}
-                style={styles.templateSelect}
-                disabled={isProcessing}
-              >
-                {Object.entries(templates).map(([key, value]) => (
-                  <option key={key} value={key}>{value.name}</option>
-                ))}
-              </select>
-            </div>
-
-            {/* File type indicator */}
-            <div style={{
-              padding: '0.75rem 1rem',
-              backgroundColor: 'var(--bg-secondary)',
-              borderRadius: '0.5rem',
-              marginTop: '1rem',
-              border: '1px solid var(--border-light)'
-            }}>
-              <div style={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                gap: '0.5rem',
-                fontSize: '0.875rem',
-                color: 'var(--text-secondary)'
-              }}>
-                {isMultipleFiles ? <ImageIcon size={16} /> : <FileText size={16} />}
-                <span>
-                  {isMultipleFiles && !isPdfFile 
-                    ? `${uploadedFiles.length} images selected - will process all images separately`
-                    : isPdfFile 
-                      ? 'PDF document - use "Extract" for first page or "Extract All Pages" for multipage'
-                      : 'Single file selected'
-                  }
-                </span>
-              </div>
-            </div>
-          </>
-        )}
       </div>
 
       {/* Step 2: Template Field Configuration */}
@@ -308,9 +257,9 @@ const ExtractionTab = ({
         <div style={styles.card}>
           <div style={styles.cardHeader}>
             <div style={{ ...styles.iconWrapper, ...styles.purpleIcon }}>
-              <Settings style={{ color: '#7c3aed' }} />
+              <Settings style={{ color: '#007AFF' }} />
             </div>
-            <h2 style={styles.cardTitle}>Field Configuration</h2>
+            <h3 style={styles.cardTitle}>Field Configuration</h3>
             <button
               onClick={() => setShowFieldManager(!showFieldManager)}
               style={fieldManagerButton}
@@ -455,7 +404,6 @@ const ExtractionTab = ({
                 cursor: (isProcessing || customFields.length === 0) ? 'not-allowed' : 'pointer'
               }}
             >
-              {isMultipleFiles && !isPdfFile ? <ImageIcon size={18} /> : <Target size={18} />}
               {getExtractionButtonText()}
             </button>
             
@@ -470,7 +418,6 @@ const ExtractionTab = ({
                   cursor: (isProcessing || customFields.length === 0) ? 'not-allowed' : 'pointer'
                 }}
               >
-                <Layers size={18} />
                 {isProcessingMultiImage ? 'Processing Pages...' : 'Extract All Pages (PDF)'}
               </button>
             )}

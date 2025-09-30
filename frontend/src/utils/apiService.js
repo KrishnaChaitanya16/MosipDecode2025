@@ -6,7 +6,7 @@
 * @returns {Promise} - The JSON response from the API.
 */
 const api_base2 = 'https://unmachineable-mauro-crucially.ngrok-free.dev'
-const api_base = 'http://127.0.0.1:8000';
+export const api_base = 'http://127.0.0.1:8000';
 
 export const extractOCRDataWithDetection = async (file, language = 'en', fields = null) => {
   console.log("Fields");
@@ -20,7 +20,8 @@ export const extractOCRDataWithDetection = async (file, language = 'en', fields 
   if (fields && fields.length > 0) {
     formData.append('fields', JSON.stringify(fields));
   }
-
+  console.log("Form Data");
+  console.log(formData);
   const response = await fetch(`${api_base}/extract`, {
     method: 'POST',
     body: formData
@@ -29,38 +30,6 @@ export const extractOCRDataWithDetection = async (file, language = 'en', fields 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({ error: 'Request with detection failed' }));
     throw new Error(errorData.error || `Request with detection failed: ${response.status}`);
-  }
-
-  return response.json();
-};
-
-/**
-* Extracts OCR data from all pages of a PDF document.
-* @param {File} file - The PDF file to process.
-* @param {string} language - The language code for OCR processing.
-* @param {string[]} fields - Array of field names to extract (optional).
-* @returns {Promise} - The JSON response from the API.
-*/
-export const extractMultipagePdfData = async (file, language = 'en', fields = null) => {
-  console.log(`📄 Starting multipage PDF extraction for: ${file.name} with language: ${language}`);
-
-  const formData = new FormData();
-  formData.append('document', file);
-  formData.append('language', language);
-
-  // Add fields parameter if provided
-  if (fields && fields.length > 0) {
-    formData.append('fields', JSON.stringify(fields));
-  }
-
-  const response = await fetch(`${api_base}/extract/pdf/all`, {
-    method: 'POST',
-    body: formData
-  });
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({ error: 'Multipage extraction failed' }));
-    throw new Error(errorData.error || `Multipage extraction failed: ${response.status}`);
   }
 
   return response.json();

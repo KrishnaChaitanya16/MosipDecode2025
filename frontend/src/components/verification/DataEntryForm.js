@@ -133,30 +133,6 @@ const DataEntryForm = ({
   return (
     <div>
       <div style={{ marginBottom: '1.5rem' }}>
-
-        {/* Dynamic Field Count Display */}
-        {customFields && (
-          <div style={{
-            marginBottom: '1rem',
-            padding: '0.75rem',
-            backgroundColor: 'var(--bg-tertiary)',
-            borderRadius: 'var(--radius-sm)',
-            border: '1px solid var(--border-light)'
-          }}>
-            <p style={{
-              margin: 0,
-              fontSize: '0.875rem',
-              color: 'var(--text-secondary)',
-              fontWeight: '500'
-            }}>
-              <strong>Verification Form Fields ({fieldsToRender.length}):</strong>{' '}
-              <span style={{ color: 'var(--text-tertiary)', fontWeight: '400' }}>
-                {fieldsToRender.map(f => f.label).join(', ')}
-              </span>
-            </p>
-          </div>
-        )}
-
         {/* Dynamic Form Fields with Horizontal Layout */}
         <div style={{ marginBottom: '1.5rem' }}>
           <div style={{ 
@@ -187,72 +163,6 @@ const DataEntryForm = ({
             )}
           </div>
         </div>
-
-        {/* JSON Input Section (Optional) */}
-        {fieldsToRender.length > 0 && (
-          <details style={{ marginBottom: '1rem' }}>
-            <summary style={{
-              cursor: 'pointer',
-              fontSize: '0.9rem',
-              fontWeight: '500',
-              color: 'var(--text-primary)',
-              padding: '0.5rem',
-              backgroundColor: 'var(--bg-secondary)',
-              borderRadius: 'var(--radius-sm)',
-              border: '1px solid var(--border-light)'
-            }}>
-              📋 JSON Bulk Input (Advanced)
-            </summary>
-            <div style={{ 
-              marginTop: '1rem',
-              padding: '1rem',
-              backgroundColor: 'var(--bg-secondary)',
-              borderRadius: 'var(--radius-sm)',
-              border: '1px solid var(--border-light)'
-            }}>
-              <textarea
-                value={jsonInput}
-                onChange={(e) => handleJsonInputChange(e.target.value)}
-                placeholder={`{\n  "${fieldsToRender[0]?.id || 'field_name'}": "value",\n  "${fieldsToRender[1]?.id || 'another_field'}": "value"\n}`}
-                style={{
-                  width: '100%',
-                  minHeight: '100px',
-                  padding: 'var(--space-sm)',
-                  border: '1px solid var(--border-medium)',
-                  borderRadius: 'var(--radius-sm)',
-                  background: 'var(--bg-primary)',
-                  color: 'var(--text-primary)',
-                  fontSize: '0.875rem',
-                  fontFamily: 'monospace',
-                  resize: 'vertical',
-                  boxSizing: 'border-box'
-                }}
-              />
-              {jsonError && (
-                <p style={{ 
-                  color: 'var(--error)', 
-                  fontSize: '0.875rem', 
-                  marginTop: '0.5rem',
-                  marginBottom: 0 
-                }}>
-                  {jsonError}
-                </p>
-              )}
-              <button
-                onClick={populateWithSampleData}
-                style={{
-                  ...styles.button,
-                  ...styles.secondaryButton,
-                  fontSize: '0.875rem',
-                  padding: '0.5rem 1rem',
-                  marginTop: '0.5rem'
-                }}
-              >
-                📝 Fill Sample Data
-              </button>
-            </div>
-          </details>
-        )}
 
         {/* Action Buttons */}
         <div style={{ 
