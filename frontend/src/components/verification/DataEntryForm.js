@@ -73,7 +73,7 @@ const DataEntryForm = ({
     setJsonInput(value);
     setJsonError('');
 
-    if (!value.trim()) {
+    if (typeof value === 'string' && !value.trim()) {
       return;
     }
 

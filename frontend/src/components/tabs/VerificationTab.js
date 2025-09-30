@@ -158,7 +158,7 @@ const VerificationTab = ({
   };
 
   const addCustomField = () => {
-    if (newFieldName.trim()) {
+    if (typeof newFieldName === 'string' && newFieldName.trim()) {
       const newField = {
         id: newFieldName.trim(),
         label: newFieldName.trim(),

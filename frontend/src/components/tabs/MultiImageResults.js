@@ -30,7 +30,7 @@ const MultiImageResults = ({
       if (!imageData.hasError && imageData.extractedData) {
         Object.keys(imageData.extractedData).forEach(fieldId => {
           const value = imageData.extractedData[fieldId];
-          if (value && value.trim() && (!mergedData[fieldId] || !mergedData[fieldId].trim())) {
+          if (value && typeof value === 'string' && value.trim() && (!mergedData[fieldId] || (typeof mergedData[fieldId] === 'string' && !mergedData[fieldId].trim()))) {
             mergedData[fieldId] = value;
           }
         });
@@ -148,7 +148,7 @@ const MultiImageResults = ({
         }}>
           <CheckCircle size={14} />
           <span>
-            <strong>{Object.values(unifiedFormData).filter(v => v && v.trim()).length}</strong> of{' '}
+            <strong>{Object.values(unifiedFormData).filter(v => v && typeof v === 'string' && v.trim()).length}</strong> of{' '}
             <strong>{fields.length}</strong> fields populated from {successfulImages} processed images
           </span>
         </div>

@@ -37,7 +37,7 @@ const UnifiedResultsComponent = ({
         if (!imageData.hasError && imageData.extractedData) {
           Object.keys(imageData.extractedData).forEach(fieldId => {
             const value = imageData.extractedData[fieldId];
-            if (value && value.trim() && (!mergedData[fieldId] || !mergedData[fieldId].trim())) {
+            if (value && typeof value === 'string' && value.trim() && (!mergedData[fieldId] || (typeof mergedData[fieldId] === 'string' &&!mergedData[fieldId].trim()))) {
               mergedData[fieldId] = value;
             }
           });
@@ -50,7 +50,7 @@ const UnifiedResultsComponent = ({
           if (pageData.data) {
             Object.keys(pageData.data).forEach(fieldId => {
               const value = pageData.data[fieldId];
-              if (value && value.trim() && (!mergedData[fieldId] || !mergedData[fieldId].trim())) {
+              if (value && typeof value === 'string' && value.trim() && (!mergedData[fieldId] || (typeof mergedData[fieldId] === 'string' && !mergedData[fieldId].trim()))) {
                 mergedData[fieldId] = value;
               }
             });
@@ -130,7 +130,7 @@ const UnifiedResultsComponent = ({
       'Export Type': type,
       'Export Date': new Date().toISOString(),
       'Total Fields': fields.length,
-      'Filled Fields': Object.values(unifiedFormData).filter(v => v && v.trim()).length
+      'Filled Fields': Object.values(unifiedFormData).filter(v => v && typeof v === 'string' && v.trim()).length
     }];
 
     // Create workbook

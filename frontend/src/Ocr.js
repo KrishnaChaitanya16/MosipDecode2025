@@ -892,14 +892,12 @@ const HomePage = ({ darkMode }) => (
         <div className="feature-card animate-slide-up" style={{ animationDelay: '0.3s' }}>
 
           <h3>Multilingual Support</h3>
-          <p>Process documents in 50+ languages with native understanding of regional formats and layouts.</p>
+          <p>Process documents in several languages, with dedicated support for English, Chinese, Japanese, and Korean formats and layouts.</p>
           <ul>
-            <li>50+ supported languages</li>
+            <li>Handles English and East Asian character sets</li>
             <li>Regional format recognition</li>
-            <li>Cultural context awareness</li>
           </ul>
         </div>
-
         <div className="feature-card animate-slide-up" style={{ animationDelay: '0.4s' }}>
 
           <h3>Batch Processing</h3>
