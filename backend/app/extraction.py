@@ -22,7 +22,7 @@ from .utils import (
 
 logger = logging.getLogger(__name__)
 
-NGROK_API_URL = "http://127.0.0.1:9000"
+NGROK_API_URL = "http://127.0.0.1:8001"
 api_endpoint = f"{NGROK_API_URL}/extract"
 
 # ----------------------------
@@ -558,7 +558,7 @@ def map_fields_via_api(ocr_text: str,custom_fields=None):
             "Content-Type": "application/json", 
             "ngrok-skip-browser-warning": "true"  # CRITICAL for ngrok-free
         }
-        response = requests.post(api_endpoint, json=payload, headers=headers, timeout=30)
+        response = requests.post(api_endpoint, json=payload, headers=headers, timeout=120)
 
         if response.status_code == 200:
             data = response.json()
