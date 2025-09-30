@@ -89,3 +89,4 @@ python-bidi==0.6.6
 scikit-image==0.25.2
 tifffile==2025.9.20
 torchvision==0.23.0
+nest-asyncio==1.6.0
