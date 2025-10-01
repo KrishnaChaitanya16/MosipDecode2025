@@ -33,7 +33,10 @@ RUN pip install --upgrade pip \
 # ----------------------------
 COPY backend/ .
 
-
+# ----------------------------
+# Preload PHOCR Models (so runtime is offline)
+# ----------------------------
+RUN python3 -c "from phocr import PHOCR; engine = PHOCR(); print('✅ PHOCR models cached')"
 
 # ----------------------------
 # Entry Point
