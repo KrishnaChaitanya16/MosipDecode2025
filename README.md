@@ -85,7 +85,7 @@ The traditional process in not only slow but also introduces high risk of data e
 
 - **The Solution**: We integrated a deskewing algorithm into the image preprocessing pipeline. This automatically detects and corrects the rotational angle of any input document, ensuring the text is properly aligned before the OCR engine processes it. This step made our extraction far more reliable on real-world scans.
   
--  ** The Result**: As a result, the system now maintains strong accuracy for images with skew angles of up to ±30°.
+-  **The Result**: As a result, the system now maintains strong accuracy for images with skew angles of up to ±30°.
   
 
 
@@ -154,6 +154,7 @@ python3 -m venv .venv
 pip install -r requirements.txt
 ```
 Now before running the main OCR backend server , setup the LLM server:
+
 5. From backend move to app directory
 ``` bash 
 cd app
@@ -195,22 +196,32 @@ After this backend  is Ready.
 
 **Option B** : For quick Setup or deploying the service and use it in real-word applications.
 Ensure Docker is  installed and running in the background, also ensure Internet connectivity for building the image , first run of the image.
-	**Without building the image locally**:
-	``` 
+
+
+
+**Without building the image locally**:
+	
 	docker pull venkat96r/ocr_backend:latest
-	```
-	After the pull is you should see something like this:
-	- Run the image :
+	
+	
+After the pull is you should see something like this:
+
+- Run the image :
+	
 	``` 
 	docker run -d -p 8000:8000 venkat96r/ocr_backend:latest
 	```
-	After the successful run you should see something like this:
+After the successful run you should see something like this:
+
 **If you want to build the image locally**:
+
 Run the follwoing command:
+
 ``` bash
 docker build -t ocr_backend:latest
 ```
 To run the image:
+
 ``` bash
 docker run -d -p 8000:8000 venkat96r/ocr_backend:latest
 ```
