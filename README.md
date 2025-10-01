@@ -1,4 +1,5 @@
 
+
 # Optical Character Recognition (OCR) for Text Extraction and Verification
 
 A robust solution that uses Optical Character Recognition (OCR) to seamlessly extract text from scanned documents, intelligently auto-fill digital forms, and verify the extracted data.
@@ -106,6 +107,8 @@ The results are shown in the graph below.
 - **The Result** : The system is now deployable in remote regions, supporting low-resource environments and enabling adoption by local governments and organizations. This aligns with MOSIP’s mission to provide inclusive, secure, and accessible digital identity solutions globally.
 
 ## Getting Started 
+ ### Backend Setup:
+ **Option A** (Without Docker): For developers  who want to look at the code directly and make the changes to code.
  - ### Prerequisites:
  > **Note:** The project **must** be run on **Windows** or **Linux** systems. Other operating systems are not supported.
 
@@ -123,6 +126,7 @@ Make sure the following are installed before running the project:
 
 - **Git**  
   To clone the repository.
+ - **Docker**(Optional for deploying the backend): For running the application in container.
 
  - ### Installation:
   1. Clone the Repository:
@@ -131,64 +135,203 @@ Make sure the following are installed before running the project:
 
 git clone https://github.com/KrishnaChaitanya16/MosipDecode2025.git
 ```
-> **Important Pre-Setup** : 
-   Before starting the backend server , you must run the ```mapping.ipynb``` notebook in Google Colab/Kaggle Notebook with GPU accelerator support enabled:
-
-  - Open the notebook file ```backend/mapping.ipynb``` in Google Colab/Kaggle Notebook.
-  - Click **Runtime -> Run all** to execute every cell.
-  - Wait untill all cells finish and Ngrok sever starts running.
-  - Copy the Ngrok server public url as shown in the below image
-    <img width="1239" height="166" alt="Screenshot 2025-09-26 at 9 56 11 AM" src="https://github.com/user-attachments/assets/073c2f43-472c-4af6-b972-7c7734211b48" />
-
-
-  - Now replace the ```NGROK_API_URL``` in the ```backend/extraction.py``` with copied public URL as show in below
-    <img width="1081" height="239" alt="Ngrok" src="https://github.com/user-attachments/assets/019d88ec-611f-4cdd-a31b-2c4f9108d9ef" />
-
-  - Once the colab server starts running , proceed to backend server setup.
-> Note : If the collab/Kaggle seesion ends or expires or runs out of resources , please make sure to run the notebook in an new session.
-
-  
-2. Move to the backend folder:
-  ```bash
-  cd backend
-  ```  
-3. Install all the requirements:
-````bash
+2.  Move to the backend folder :
+``` bash
+cd backend
+```
+3. Create and Activate  Virtual Python Environment;
+```bash
+python3 -m venv .venv
+```
+- Activation for Windows run the following command:
+		- ``` 
+		 .venv\Scripts\Activate
+		 ```
+- Activation in Linux :
+		- ``` .venv\Scripts\Activate```
+4. Install requirements for backend:
+``` bash
 pip install -r requirements.txt
+```
+Now before running the main OCR backend server , setup the LLM server:
+5. From backend move to app directory
+``` bash 
+cd app
+```
+6. Now start the LLM server:
+> Note : before starting the LLM server , make sure Ollama CLI is installed and up and running. Steps given below:
+> Our backend uses **Ollama** to run the Qwen2.5-1.5B-Instruct model fully offline.
+  - Ollama setup :
+    Download and install [Ollama](https://ollama.com/download]) from the official site
+    1. After installation verify Ollama is working by using the command in main terminal:
+    ``` bash 
+    ollama --version
+    ```
+     2.  Pull the Qwen2.5 Model:
+      ``` bash
+      ollama pull qwen2.5:1.5b
+      ```
+      3. verify the download :
+      ``` bash 
+      ollama list
+      ```
+      You should see `qwen2.5:1.5b` in the list.
+ - Run the LLM server code:
+    In the ``` backend/app``` folder:
+    ``` bash
+    python3 mappingfinal.py
+    ```
+    You  must see something like this :
 
-````
-4. Similarly, to install the frontend, first move to the parent folder and then move to the frontend folder.
-````bash
-cd ..
-cd frontend
-````
+7. Setting up the main backend server:
+  Make sure ``` mappingfinal.py``` is running . Open a new terminal and navigate to ``` backend/``` folder :
+  ``` bash
+  uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+  ```
+  Now you should see Some thing like this :
 
-5. Install the frontend dependencies.
-````bash
-npm install
-````
 
-6. Run the React application.
-````bash
-npm start
-````
+After this backend  is Ready.
 
- - ### Running the application:
- 1. To run the frontend, run the following command:
- ````bash
- npm start
- ````
- 2. To run the backend, use the following commands:
- ````bash
- cd ..
- cd backend
- uvicorn app.main:app --reload
- ````
+**Option B** : For quick Setup or deploying the service and use it in real-word applications.
+Ensure Docker is  installed and running in the background, also ensure Internet connectivity for building the image , first run of the image.
+	**Without building the image locally**:
+	``` 
+	docker pull venkat96r/ocr_backend:latest
+	```
+	After the pull is you should see something like this:
+	- Run the image :
+	``` 
+	docker run -d -p 8000:8000 venkat96r/ocr_backend:latest
+	```
+	After the successful run you should see something like this:
+**If you want to build the image locally**:
+Run the follwoing command:
+``` bash
+docker build -t ocr_backend:latest
+```
+To run the image:
+``` bash
+docker run -d -p 8000:8000 venkat96r/ocr_backend:latest
+```
+
+
+### Frontend Setup:
+After Successfully setting up the backend  either with Docker or without it . To setup the frontend follow the below steps:
+1. Move to the frontend folder:
+ ``` bash 
+  cd frontend
+  ```
+  2. Install the dependencies:
+  ``` bash
+  npm install
+  ```
+  3. Run the frontend:
+  ``` bash
+  npm start
+  ```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	
+	
+			
+	
+	
+
+       
+
+
+		
+	
+
+
 
 
 ## API Documentation
-- **1.OCR Extraction API**:
-- **2.Data Verification API**:
+
+ 1. **OCR Extraction API**
+
+This API extracts text from a document image and maps the extracted text to given fields.
+
+* **Endpoint**: `/extract` 
+* **Method**: `POST` 
+* **Headers**: `Content-Type: multipart/form-data`
+* **Body** (form-data):
+    * **document** (file): The image file of the document to be processed (e.g., `dummy_aadhaar.png`).
+    * **include\_detection** (text): A boolean value ("true" or "false") to indicate whether to include detailed detection information in the response.
+    * **fields** (text): A JSON array of strings representing the fields to be extracted from the document (e.g., `["name", "date of birth", "gender", "aadhaar number"]`).
+
+### Successful Response (200 OK)
+
+* **Content-Type**: `application/json` 
+* **Body (JSON)**:
+    * **mapped\_fields** (object): An object containing the extracted fields as key-value pairs.
+        * **Example**: 
+            ```json
+            {
+              "name": "Vaishnavi Singh",
+              "date of birth": "16/11/2004",
+              "gender": "FEMALE",
+              "aadhaar number": "8911 3824 2345"
+            }
+            ```
+           
+    * **detections** (array): An array of objects, where each object represents a detected text block in the document. Each object contains:
+        * `text` (string): The detected text.
+        * `confidence` (number): The confidence score of the detection.
+        * `bbox` (object): The bounding box of the detected text with coordinates `x1`, `y1`, `x2`, and `y2`.
+        * `polygon` (array): The polygon coordinates of the detected text.
+        * `confidence_level` (string): The confidence level of the detection (e.g., "low", "high").
+    * **total\_detections** (number): The total number of text blocks detected.
+    * **confidence\_overlay** (string): A base64 encoded image string of the document with confidence levels overlaid.
+    * **has\_detection\_data** (boolean): A boolean indicating if detection data is available.
+    * **processing\_info** (object): An object containing information about the processing of the document.
+        * `language` (string): The language detected in the document.
+        * `elapsed_time` (number): The time taken to process the document in seconds.
+        * `page_number` (number): The page number of the document processed.
+        * `is_pdf` (boolean): A boolean indicating if the document is a PDF.
+        * `custom_fields_used` (number): The number of custom fields used for extraction.
+
+
+
+ 2. **Data Verification API**
+
+This API verifies submitted data against the data extracted from a document image.
+
+* **Endpoint**: `/verify` 
+* **Method**: `POST` 
+* **Headers**: `Content-Type: multipart/form-data`
+* **Body** (form-data):
+    * **document** (file): The image file of the document for verification.
+    * **verification\_data** (text): A JSON object containing the key-value pairs to be verified against the document.
+        * **Example**: 
+            ```json
+            {"Name": "John Smith", "age": "30", "gender": "Male", "address":"i23 elmst"}
+            ```
+          
+    * **fields** (text): A JSON array of strings representing the fields to be verified.
+        * **Example**: `["Name","age","gender","address"]` 
+
+### Successful Response (200 OK)
+
+* **success** (boolean): Indicates if the API call was successful.
+* **verification\_result** (object): Contains the detailed results of the verification.
+    * **overall\_status** (string): The overall verification status (e.g., "verified").
+    * **overall\_confidence** (number): The overall confidence score of the verification (e.g., 100).
+    * **field\_results** (object): An object detailing the verification for each submitted field, including the submitted value, extracted value, similarity score, status, and confidence.
+    * **debug\_info** (object): Provides debugging information like the fields submitted and extracted.
 
  
    
