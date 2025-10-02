@@ -184,6 +184,8 @@ cd app
     python3 mappingfinal.py
     ```
     You  must see something like this :
+   <img width="914" height="218" alt="image" src="https://github.com/user-attachments/assets/025e2ea9-496a-4da1-8895-1feed69e777a" />
+
 
 7. Setting up the main backend server:
   Make sure ``` mappingfinal.py``` is running . Open a new terminal and navigate to ``` backend/``` folder :
