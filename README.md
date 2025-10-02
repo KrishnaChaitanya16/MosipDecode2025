@@ -164,7 +164,7 @@ cd app
 > Note : before starting the LLM server , make sure Ollama CLI is installed and up and running. Steps given below:
 > Our backend uses **Ollama** to run the Qwen2.5-1.5B-Instruct model fully offline.
   - Ollama setup :
-    Download and install [Ollama](https://ollama.com/download]) from the official site
+    Download and install [Ollama](https://ollama.com/download) from the official site
     1. After installation verify Ollama is working by using the command in main terminal:
     ``` bash 
     ollama --version
