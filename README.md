@@ -101,6 +101,7 @@ The results are shown in the graph below.
 - **Test Results** : Both performed equally well for high quality images , but when it came to low quality and languages other than english PHOCR performed better than TrOCR.
 
  After comparative testing, we switched to the PHOCR model. It demonstrated superior overall accuracy and, crucially, performed exceptionally well with complex character sets like Chinese and Japanese, where TrOCR had failed. This decision was key to achieving the project's multi-lingual requirements.
+
 3. **Ensuring Offline Functionality & Low-End Hardware Support**:
 - **The Challange**: Many OCR + AI solutions rely on cloud APIs or require powerful GPUs, making them unusable in remote areas without reliable internet and on low-cost hardware. This risked excluding the very users who need automation most.
 - **The Solution**: We re-architected the pipeline to run entirely offline, packaging OCR (PHOCR), LLM-based mapping (Qwen2.5-1.5B-Instruct), and FastAPI into a self-contained system. With lightweight optimization and Docker Compose setup, the solution can be launched in just two commands, even on machines with lower Hardware configurations.
