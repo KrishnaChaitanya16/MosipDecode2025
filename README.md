@@ -184,7 +184,8 @@ cd app
     python3 mappingfinal.py
     ```
     You  must see something like this :
-   <img width="914" height="218" alt="image" src="https://github.com/user-attachments/assets/025e2ea9-496a-4da1-8895-1feed69e777a" />
+   <img width="914" height="218" alt="Screenshot 2025-10-03 010928" src="https://github.com/user-attachments/assets/7aa523c0-a119-4598-8900-a6b0fac77ba3" />
+
 
 
 7. Setting up the main backend server:
