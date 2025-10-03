@@ -57,11 +57,17 @@ The traditional process in not only slow but also introduces high risk of data e
 5. **Real-time Confidence zones**: 
 - **Instant Visual Feedback**: Provides immediate feedback by drawing bounding boxes directly on the original document image.
 - **Shows OCR Confidence**: Each box is color-coded or labeled to show the confidence level of the text recognition inside it.
-6 . **Fully-Offline & Remote Friendly**:
+6. **Live Camera Capture**:
+- Capture documents directly using the device camera for instant scanning and processing.
+- Reduces the need for separate scanning hardware.
+- Works in real time, enabling field agents or end-users to directly digitize paper forms on the spot.
+  
+  
+7 . **Fully-Offline & Remote Friendly**:
 - **Works without internet connectivity**, ensuring adoption in remote or low-connectivity regions.
 - Protects data privacy by keeping all processing on local machines.
 - Optimized to run even on low-end hardware , reducing infrastructure costs.
-7. **Simple and Portable Setup**:
+8. **Simple and Portable Setup**:
 - The entire and system can be deployed with simple commands using Docker
 - No cloud dependency , No External Configuration.
 - Suitable for on-premise deployment in schools, offices, and government agencies in rural areas.
