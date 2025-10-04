@@ -33,6 +33,8 @@ The traditional process in not only slow but also introduces high risk of data e
  - Simply upload your document as a PDF or image to receive accurately extracted text in seconds, all while minimizing the errors commonly found in manual data entry.
  -  **Auto-Fill Digital Form** smartly using the extracted data for more accuratly and easily
  - **Multi-Lingual Support**  - Our project is equipped to handle complex international character sets. It offers robust supoort for not only Latin-Based languages but also suports Non-Latin languages such as Chinese, Japanese, and Korean.
+ 	 - **Automatic Language Detection**: The OCR pipeline automatically identifies the language in the document and applies the correct model, removing the need for manual selection.
+   
  2. **Data Verification**: 
  - This feature acts as a crucial safety net to ensure the absolute accuracy of your data.
 
@@ -96,7 +98,7 @@ The traditional process in not only slow but also introduces high risk of data e
 
 
 2. **Selecting the Optimal OCR Model**:
- -**The Challenge**: Our initial choice, TrOCR, performed well with Latin scripts but struggled with accuracy on our specific test data, especially with non-Latin languages.
+ -**The Challenge**: Our initial choice, TrOCR, performed well with Latin scripts but struggled with accuracy on our specific test data, especially with poor quality images.
 
 -**The Solution**:We created a benchmark set of 50 images of varying quality (different resolutions, lighting conditions, and languages) and measured the accuracy of both TrOCR and PHOCR.
 The results are shown in the graph below.
@@ -106,13 +108,14 @@ The results are shown in the graph below.
 
 - **Test Results** : Both performed equally well for high quality images , but when it came to low quality and languages other than english PHOCR performed better than TrOCR.
 
- After comparative testing, we switched to the PHOCR model. It demonstrated superior overall accuracy and, crucially, performed exceptionally well with complex character sets like Chinese and Japanese, where TrOCR had failed. This decision was key to achieving the project's multi-lingual requirements.
+ After comparative testing, we switched to the PHOCR model. It demonstrated superior overall accuracy and, crucially, performed exceptionally well with lower quality images as well, where TrOCR had failed. 
 
 3. **Ensuring Offline Functionality & Low-End Hardware Support**:
 - **The Challange**: Many OCR + AI solutions rely on cloud APIs or require powerful GPUs, making them unusable in remote areas without reliable internet and on low-cost hardware. This risked excluding the very users who need automation most.
 - **The Solution**: We re-architected the pipeline to run entirely offline, packaging OCR (PHOCR), LLM-based mapping (Qwen2.5-1.5B-Instruct), and FastAPI into a self-contained system. With lightweight optimization and Docker Compose setup, the solution can be launched in just two commands, even on machines with lower Hardware configurations.
 - **The Result** : The system is now deployable in remote regions, supporting low-resource environments and enabling adoption by local governments and organizations. This aligns with MOSIP’s mission to provide inclusive, secure, and accessible digital identity solutions globally.
-
+4. **Choosing a good Large-Language Model for Intelligent mapping**:
+  
 ## Getting Started 
  ### Backend Setup:
  **Option A** (Without Docker): For developers  who want to look at the code directly and make the changes to code.
@@ -229,12 +232,12 @@ After the successful run you should see something like this:
 Run the follwoing command:
 
 ``` bash
-docker build -t ocr_backend:latest
+docker build -t ocr_backend:latest .
 ```
 To run the image:
 
 ``` bash
-docker run -d -p 8000:8000 venkat96r/ocr_backend:latest
+docker run -d -p 8000:8000 ocr_backend:latest
 ```
 
 
