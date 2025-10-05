@@ -241,7 +241,7 @@ After the successful run you should see something like this:
 
 **If you want to build the image locally**:
 
-Run the follwoing command:
+Navigate to the root directory and run the follwoing command:
 
 ``` bash
 docker build -t ocr_backend:latest .
