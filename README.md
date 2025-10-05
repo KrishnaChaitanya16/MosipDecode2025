@@ -224,6 +224,7 @@ cd app
   uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
   ```
   Now you should see Some thing like this :
+  <img width="1272" height="400" alt="Screenshot 2025-10-05 215710" src="https://github.com/user-attachments/assets/e7500ad7-4d05-454d-b685-abfd5d7f5329" />
 
 
 After this backend  is Ready.
