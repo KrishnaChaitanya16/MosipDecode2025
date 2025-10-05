@@ -5,7 +5,9 @@
 A robust solution that uses Optical Character Recognition (OCR) to seamlessly extract text from scanned documents, intelligently auto-fill digital forms, and verify the extracted data.
 Unlike most solutions that depend on cloud services or large models, our system can run fully offline, even on low-end computers. This makes it especially useful for adoption in remote areas without reliable network connectivity, ensuring accessibility and ease of setup anywhere.
 
-## Video Demo
+## Walkthrough Video of  Our Solution
+[Youtube Link](https://youtu.be/kdGyAwhMve0)
+
 
 
 ##  Table of Contents
@@ -33,6 +35,8 @@ The traditional process in not only slow but also introduces high risk of data e
  - Simply upload your document as a PDF or image to receive accurately extracted text in seconds, all while minimizing the errors commonly found in manual data entry.
  -  **Auto-Fill Digital Form** smartly using the extracted data for more accuratly and easily
  - **Multi-Lingual Support**  - Our project is equipped to handle complex international character sets. It offers robust supoort for not only Latin-Based languages but also suports Non-Latin languages such as Chinese, Japanese, and Korean.
+ 	 - **Automatic Language Detection**: The OCR pipeline automatically identifies the language in the document and applies the correct model, removing the need for manual selection.
+   
  2. **Data Verification**: 
  - This feature acts as a crucial safety net to ensure the absolute accuracy of your data.
 
@@ -57,11 +61,21 @@ The traditional process in not only slow but also introduces high risk of data e
 5. **Real-time Confidence zones**: 
 - **Instant Visual Feedback**: Provides immediate feedback by drawing bounding boxes directly on the original document image.
 - **Shows OCR Confidence**: Each box is color-coded or labeled to show the confidence level of the text recognition inside it.
-6 . **Fully-Offline & Remote Friendly**:
+6. **Live Camera Capture**:
+- Capture documents directly using the device camera for instant scanning and processing.
+- Reduces the need for separate scanning hardware.
+- Works in real time, enabling field agents or end-users to directly digitize paper forms on the spot.
+  
+  
+7 . **Fully-Offline & Remote Friendly**:
 - **Works without internet connectivity**, ensuring adoption in remote or low-connectivity regions.
 - Protects data privacy by keeping all processing on local machines.
 - Optimized to run even on low-end hardware , reducing infrastructure costs.
-7. **Simple and Portable Setup**:
+8. **User-Friendly Web Interface**:
+- Modern, responsive design that works seamlessly across devices (desktop, tablet, mobile).
+- Supports both dark mode and light mode for better user experience.
+- Intuitive workflows ensure ease of use, even for non-technical users.
+9. **Simple and Portable Setup**:
 - The entire and system can be deployed with simple commands using Docker
 - No cloud dependency , No External Configuration.
 - Suitable for on-premise deployment in schools, offices, and government agencies in rural areas.
@@ -78,6 +92,17 @@ The traditional process in not only slow but also introduces high risk of data e
 
 
 ## Architectural Design
+The system follows a modular, offline-first architecture designed for efficiency, scalability, and deployment in remote environments:
+- **Input Layer** (Document/Image Capture): Accepts documents as PDFs, images, or live camera capture.
+- **Pre-Processing Module**: Validates inputs by checking resolution, blur, contrast, and skew before OCR.
+- **OCR & Data Extraction Engine**: Uses  PHOCR pipelines to extract multilingual text accurately.
+- **LLM-based Intelligent Mapping**: Qwen2.5-1.5B is integrated via Ollama to map extracted data into structured digital forms.
+- **Verification Module**: Performs field-level cross-checks between extracted data and original documents, assigning confidence scores.
+- **Backend API (FastAPI)**: Manages communication between frontend, OCR, verification, and LLM services.
+- **Deployment Layer** (Dockerized): Fully containerized for portability, offline setup, and easy deployment on low-resource machines.
+  **Diagram**:
+  <img width="2839" height="544" alt="diagram-export-10-5-2025-11_36_34-AM" src="https://github.com/user-attachments/assets/c3cd1048-dc88-4300-9902-1f5abd87e1d0" />
+
 
 ## Challenges and Solutions
  1. **Handling Tilted or Skewed Images**:
@@ -90,7 +115,7 @@ The traditional process in not only slow but also introduces high risk of data e
 
 
 2. **Selecting the Optimal OCR Model**:
- -**The Challenge**: Our initial choice, TrOCR, performed well with Latin scripts but struggled with accuracy on our specific test data, especially with non-Latin languages.
+ -**The Challenge**: Our initial choice, TrOCR, performed well with Latin scripts but struggled with accuracy on our specific test data, especially with poor quality images.
 
 -**The Solution**:We created a benchmark set of 50 images of varying quality (different resolutions, lighting conditions, and languages) and measured the accuracy of both TrOCR and PHOCR.
 The results are shown in the graph below.
@@ -100,14 +125,20 @@ The results are shown in the graph below.
 
 - **Test Results** : Both performed equally well for high quality images , but when it came to low quality and languages other than english PHOCR performed better than TrOCR.
 
- After comparative testing, we switched to the PHOCR model. It demonstrated superior overall accuracy and, crucially, performed exceptionally well with complex character sets like Chinese and Japanese, where TrOCR had failed. This decision was key to achieving the project's multi-lingual requirements.
+ After comparative testing, we switched to the PHOCR model. It demonstrated superior overall accuracy and, crucially, performed exceptionally well with lower quality images as well, where TrOCR had failed.
+ **FUNSD Dataset results** : PHOCR was evaluated on the FUNSD dataset.You can view the detailed test results [here]().It demonstrated excellent performance on this dataset.
+
 
 3. **Ensuring Offline Functionality & Low-End Hardware Support**:
 - **The Challange**: Many OCR + AI solutions rely on cloud APIs or require powerful GPUs, making them unusable in remote areas without reliable internet and on low-cost hardware. This risked excluding the very users who need automation most.
 - **The Solution**: We re-architected the pipeline to run entirely offline, packaging OCR (PHOCR), LLM-based mapping (Qwen2.5-1.5B-Instruct), and FastAPI into a self-contained system. With lightweight optimization and Docker Compose setup, the solution can be launched in just two commands, even on machines with lower Hardware configurations.
 - **The Result** : The system is now deployable in remote regions, supporting low-resource environments and enabling adoption by local governments and organizations. This aligns with MOSIP’s mission to provide inclusive, secure, and accessible digital identity solutions globally.
+4. **Choosing a good Large-Language Model for Intelligent mapping**:
+  - We experimented with several compact LLMs but found that most struggled to follow prompts accurately. Finally, we selected Qwen2.5-1.5B, which strikes the right balance between efficiency and performance. Despite its small size, it handles multilingual inputs exceptionally well and outperforms other lightweight models in accuracy and reliability.
 
+  
 ## Getting Started 
+ ### Here is the [link](https://youtu.be/L9iFKjycY8Q) for full setup video of our solution.
  ### Backend Setup:
  **Option A** (Without Docker): For developers  who want to look at the code directly and make the changes to code.
  - ### Prerequisites:
@@ -184,13 +215,20 @@ cd app
     python3 mappingfinal.py
     ```
     You  must see something like this :
+   <img width="1325" height="265" alt="image" src="https://github.com/user-attachments/assets/4c4aa233-1e63-4395-b125-0fbd03452b0d" />
+
+
+
 
 7. Setting up the main backend server:
   Make sure ``` mappingfinal.py``` is running . Open a new terminal and navigate to ``` backend/``` folder :
+
+  > Ensure the python vitual virtual environment is activated in ``` backend/``` folder inside the new terminal before proceeding
   ``` bash
   uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
   ```
   Now you should see Some thing like this :
+  <img width="1272" height="400" alt="Screenshot 2025-10-05 215710" src="https://github.com/user-attachments/assets/e7500ad7-4d05-454d-b685-abfd5d7f5329" />
 
 
 After this backend  is Ready.
@@ -216,15 +254,15 @@ After the successful run you should see something like this:
 
 **If you want to build the image locally**:
 
-Run the follwoing command:
+Navigate to the root directory and run the follwoing command:
 
 ``` bash
-docker build -t ocr_backend:latest
+docker build -t ocr_backend:latest .
 ```
 To run the image:
 
 ``` bash
-docker run -d -p 8000:8000 venkat96r/ocr_backend:latest
+docker run -d -p 8000:8000 ocr_backend:latest
 ```
 
 
