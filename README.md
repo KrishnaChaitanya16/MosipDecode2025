@@ -96,6 +96,9 @@ The system follows a modular, offline-first architecture designed for efficiency
 - **Verification Module**: Performs field-level cross-checks between extracted data and original documents, assigning confidence scores.
 - **Backend API (FastAPI)**: Manages communication between frontend, OCR, verification, and LLM services.
 - **Deployment Layer** (Dockerized): Fully containerized for portability, offline setup, and easy deployment on low-resource machines.
+  **Diagram**:
+  <img width="2839" height="544" alt="diagram-export-10-5-2025-11_36_34-AM" src="https://github.com/user-attachments/assets/c3cd1048-dc88-4300-9902-1f5abd87e1d0" />
+
 
 ## Challenges and Solutions
  1. **Handling Tilted or Skewed Images**:
@@ -118,7 +121,9 @@ The results are shown in the graph below.
 
 - **Test Results** : Both performed equally well for high quality images , but when it came to low quality and languages other than english PHOCR performed better than TrOCR.
 
- After comparative testing, we switched to the PHOCR model. It demonstrated superior overall accuracy and, crucially, performed exceptionally well with lower quality images as well, where TrOCR had failed. 
+ After comparative testing, we switched to the PHOCR model. It demonstrated superior overall accuracy and, crucially, performed exceptionally well with lower quality images as well, where TrOCR had failed.
+ **FUNSD Dataset results** : PHOCR was evaluated on the FUNSD dataset.You can view the detailed test results [here]().It demonstrated excellent performance on this dataset.
+
 
 3. **Ensuring Offline Functionality & Low-End Hardware Support**:
 - **The Challange**: Many OCR + AI solutions rely on cloud APIs or require powerful GPUs, making them unusable in remote areas without reliable internet and on low-cost hardware. This risked excluding the very users who need automation most.
@@ -129,6 +134,7 @@ The results are shown in the graph below.
 
   
 ## Getting Started 
+ ### Here is the [link](https://youtu.be/L9iFKjycY8Q) for full setup video of our solution.
  ### Backend Setup:
  **Option A** (Without Docker): For developers  who want to look at the code directly and make the changes to code.
  - ### Prerequisites:
@@ -212,6 +218,8 @@ cd app
 
 7. Setting up the main backend server:
   Make sure ``` mappingfinal.py``` is running . Open a new terminal and navigate to ``` backend/``` folder :
+
+  > Ensure the python vitual virtual environment is activated in ``` backend/``` folder inside the new terminal before proceeding
   ``` bash
   uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
   ```
