@@ -88,6 +88,14 @@ The traditional process in not only slow but also introduces high risk of data e
 
 
 ## Architectural Design
+The system follows a modular, offline-first architecture designed for efficiency, scalability, and deployment in remote environments:
+- **Input Layer** (Document/Image Capture): Accepts documents as PDFs, images, or live camera capture.
+- **Pre-Processing Module**: Validates inputs by checking resolution, blur, contrast, and skew before OCR.
+- **OCR & Data Extraction Engine**: Uses  PHOCR pipelines to extract multilingual text accurately.
+- **LLM-based Intelligent Mapping**: Qwen2.5-1.5B is integrated via Ollama to map extracted data into structured digital forms.
+- **Verification Module**: Performs field-level cross-checks between extracted data and original documents, assigning confidence scores.
+- **Backend API (FastAPI)**: Manages communication between frontend, OCR, verification, and LLM services.
+- **Deployment Layer** (Dockerized): Fully containerized for portability, offline setup, and easy deployment on low-resource machines.
 
 ## Challenges and Solutions
  1. **Handling Tilted or Skewed Images**:
