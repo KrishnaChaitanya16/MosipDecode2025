@@ -71,7 +71,11 @@ The traditional process in not only slow but also introduces high risk of data e
 - **Works without internet connectivity**, ensuring adoption in remote or low-connectivity regions.
 - Protects data privacy by keeping all processing on local machines.
 - Optimized to run even on low-end hardware , reducing infrastructure costs.
-8. **Simple and Portable Setup**:
+8. **User-Friendly Web Interface**:
+- Modern, responsive design that works seamlessly across devices (desktop, tablet, mobile).
+- Supports both dark mode and light mode for better user experience.
+- Intuitive workflows ensure ease of use, even for non-technical users.
+9. **Simple and Portable Setup**:
 - The entire and system can be deployed with simple commands using Docker
 - No cloud dependency , No External Configuration.
 - Suitable for on-premise deployment in schools, offices, and government agencies in rural areas.
