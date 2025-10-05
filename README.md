@@ -311,6 +311,7 @@ After Successfully setting up the backend  either with Docker or without it . To
 
 ## API Documentation
 
+The Postman collection is located at ```/backend/postman_collection```. Use it to test the backend API endpoints.
  1. **OCR Extraction API**
 
 This API extracts text from a document image and maps the extracted text to given fields.
