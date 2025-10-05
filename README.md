@@ -5,7 +5,9 @@
 A robust solution that uses Optical Character Recognition (OCR) to seamlessly extract text from scanned documents, intelligently auto-fill digital forms, and verify the extracted data.
 Unlike most solutions that depend on cloud services or large models, our system can run fully offline, even on low-end computers. This makes it especially useful for adoption in remote areas without reliable network connectivity, ensuring accessibility and ease of setup anywhere.
 
-## Video Demo
+## Walkthrough Video of  Our Solution
+[Youtube Link](https://youtu.be/kdGyAwhMve0)
+
 
 
 ##  Table of Contents
@@ -115,6 +117,8 @@ The results are shown in the graph below.
 - **The Solution**: We re-architected the pipeline to run entirely offline, packaging OCR (PHOCR), LLM-based mapping (Qwen2.5-1.5B-Instruct), and FastAPI into a self-contained system. With lightweight optimization and Docker Compose setup, the solution can be launched in just two commands, even on machines with lower Hardware configurations.
 - **The Result** : The system is now deployable in remote regions, supporting low-resource environments and enabling adoption by local governments and organizations. This aligns with MOSIP’s mission to provide inclusive, secure, and accessible digital identity solutions globally.
 4. **Choosing a good Large-Language Model for Intelligent mapping**:
+  - We experimented with several compact LLMs but found that most struggled to follow prompts accurately. Finally, we selected Qwen2.5-1.5B, which strikes the right balance between efficiency and performance. Despite its small size, it handles multilingual inputs exceptionally well and outperforms other lightweight models in accuracy and reliability.
+
   
 ## Getting Started 
  ### Backend Setup:
